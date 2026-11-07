@@ -1,0 +1,29 @@
+/* edit.css - Add / Edit card form. Scoped under .view-edit. */
+
+/* Amount + currency side by side; amount takes the space */
+.view-edit .edit-amount-row { display: grid; grid-template-columns: 1fr 110px; gap: var(--space-3); align-items: start; }
+.view-edit .edit-date-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); align-items: start; }
+.view-edit .edit-barcode-row { display: grid; grid-template-columns: 1fr 140px; gap: var(--space-3); align-items: start; }
+
+/* Narrow phones: stack the date and barcode pairs */
+@media (max-width: 380px) {
+  .view-edit .edit-date-row,
+  .view-edit .edit-barcode-row { grid-template-columns: 1fr; }
+}
+
+.view-edit .edit-photo { margin-bottom: var(--space-2); }
+.view-edit .edit-photo-preview {
+  max-height: 220px;
+  width: auto;
+  border-radius: var(--radius-small);
+  border: 1px solid var(--color-border);
+}
+
+.view-edit .edit-ocr {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  background: var(--color-surface);
+}
+.view-edit .edit-ocr summary { cursor: pointer; font-weight: 600; min-height: var(--touch); display: flex; align-items: center; }
+.view-edit .edit-ocr pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-family: var(--font-mono); font-size: var(--text-small); }
