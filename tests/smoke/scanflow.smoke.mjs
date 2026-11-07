@@ -1,6 +1,6 @@
-﻿// End-to-end smoke test of the scan flow: #/scan "Choose image" -> barcode decode -> OCR step
+// End-to-end smoke test of the scan flow: #/scan "Choose image" -> barcode decode -> OCR step
 // (progress, skip, leaving) -> #/add pre-filled -> Save.
-import { openApp, check } from './helpers.mjs';
+import { openApp, check, setMerchant } from './helpers.mjs';
 
 export default async function () {
   const app = await openApp();
@@ -66,7 +66,7 @@ export default async function () {
     const ocrText = await page.locator('.edit-ocr').textContent();
     check(ocrText.includes('6035'), 'recognized text contains the OCR card number');
 
-    await page.fill('input[name="merchant"]', 'Scan Test Shop');
+    await setMerchant(page, 'Scan Test Shop');
     await page.click('button[type=submit]');
     await page.waitForFunction(() => location.hash.startsWith('#/card/'), null, { timeout: 10000 });
     const saved = await page.evaluate(async () => {

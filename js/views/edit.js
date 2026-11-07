@@ -15,6 +15,7 @@ import {
 import { getDraft, clearDraft } from '../draft.js';
 import { downscaleImage } from '../services/photo.js';
 import { BARCODE_FORMATS } from '../services/scanner.js';
+import { merchantPicker } from './merchantPicker.js';
 
 // Fields whose OCR confidence below this value are marked "please check".
 const LOW_CONFIDENCE = 0.6;
@@ -149,7 +150,8 @@ export async function render(container, params = {}) {
   const textInput = (id, value, attrs = {}) => el('input', { id, name: id, type: 'text', value, ...attrs });
 
   // ------------------------------------------------------------ controls
-  const merchant = textInput('merchant', initial.merchant, { autocomplete: 'off', 'aria-required': 'true' });
+  // Merchant: text box + user-editable quick options list below it (see merchantPicker.js).
+  const { root: merchantBox, input: merchant } = await merchantPicker(initial.merchant);
 
   // Type: segmented radios.
   const typeRadios = [[CARD_TYPES.PHYSICAL, 'Physical'], [CARD_TYPES.ELECTRONIC, 'Electronic']].map(([value, text]) =>
@@ -218,7 +220,7 @@ export async function render(container, params = {}) {
 
   const form = el('form', { class: 'stack', novalidate: true, autocomplete: 'off' },
     draft ? el('div', { class: 'banner' }, 'Check the details read from your card, then save.') : null,
-    field('merchant', 'Merchant', merchant),
+    field('merchant', 'Merchant', merchantBox, { labelFor: 'merchant' }),
     field('type', 'Type', typeGroup, { labelFor: 'type-PHYSICAL' }),
     linkField,
     field('originalAmount', 'Amount (₪)', amount),

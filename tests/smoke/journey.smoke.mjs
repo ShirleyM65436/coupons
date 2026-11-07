@@ -3,7 +3,7 @@
 //   add manually -> add a transaction -> scan (barcode + OCR, offline) -> confirm -> save
 //   -> show barcode -> export backup -> wipe -> import (replace) -> data is back.
 import { readFileSync } from 'node:fs';
-import { openApp, check } from './helpers.mjs';
+import { openApp, check, setMerchant } from './helpers.mjs';
 
 export default async function () {
   const app = await openApp();
@@ -59,7 +59,7 @@ export default async function () {
     await app.goto('#/');
     await page.click('.view-list a[href="#/add"] >> nth=0'); // empty state "Add card" (no FAB without cards)
     await hashStartsWith('#/add');
-    await page.fill('input[name="merchant"]', 'Corner Bakery');
+    await setMerchant(page, 'Corner Bakery');
     await page.fill('input[name="originalAmount"]', '40');
     await page.fill('input[name="expiryDate"]', '2030-06-30');
     await page.click('button[type=submit]');
@@ -82,7 +82,7 @@ export default async function () {
     check((await val('barcodeValue')) === '4006381333931' && (await val('barcodeFormat')) === 'ean_13', 'offline: barcode decoded');
     check((await val('expiryDate')) === '2027-12-31', `offline: OCR expiry (${await val('expiryDate')})`);
     check((await val('originalAmount')) === '25.00', 'offline: OCR amount 25.00');
-    await page.fill('input[name="merchant"]', 'Scanned Store');
+    await setMerchant(page, 'Scanned Store');
     await page.click('button[type=submit]');
     await hashStartsWith('#/card/');
     const scannedUrl = await page.evaluate(() => location.hash);

@@ -47,6 +47,7 @@ const PRECACHE = [
   'js/views/detail.js',
   'js/views/edit.js',
   'js/views/list.js',
+  'js/views/merchantPicker.js',
   'js/views/ocrStep.js',
   'js/views/scan.js',
   'vendor/jsbarcode/JsBarcode.all.min.js',

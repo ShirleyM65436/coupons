@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   parseAmountInput, minorToInputString, formatMoney, minorDigits, computeBalance, cardStatus, STATUS,
   daysUntil, parseIsoDate, isExpiringSoon, validateCard, validateTransaction, normalizeCard, isBackupOverdue,
+  statusLabel, hasValueLeft,
 } from '../js/model.js';
 
 const NOW = new Date(2026, 5, 15); // 15 June 2026, local time
@@ -82,6 +83,29 @@ test('normalizeCard fills defaults and drops link for physical cards', () => {
   assert.equal(c.link, '');
   assert.ok(c.id && c.createdAt);
   assert.equal(c.barcodeFormat, '');
+});
+
+test('vouchers: validation, status, normalize', () => {
+  const v = { kind: 'VOUCHER', merchant: 'Cinema City', voucherItem: 'Movie ticket + popcorn', currency: 'ILS', type: 'ELECTRONIC', expiryDate: '2027-01-01' };
+  assert.equal(validateCard(v).valid, true, 'no amount needed for a voucher');
+  assert.ok(validateCard({ ...v, voucherItem: ' ' }).errors.voucherItem);
+  assert.ok(validateCard({ ...v, usedAt: '2026-02-31' }).errors.usedAt);
+  assert.equal(cardStatus(v, 0, NOW), STATUS.ACTIVE, 'unused voucher is active although balance is 0');
+  assert.equal(cardStatus({ ...v, usedAt: '2026-06-01' }, 0, NOW), STATUS.USED);
+  assert.equal(cardStatus({ ...v, expiryDate: '2026-06-01' }, 0, NOW), STATUS.EXPIRED);
+  assert.equal(statusLabel(STATUS.USED, { ...v, usedAt: '2026-06-01' }), 'Used');
+  assert.equal(statusLabel(STATUS.USED, { kind: 'MONEY' }), 'Used up');
+  assert.equal(hasValueLeft(v, 0), true);
+  assert.equal(hasValueLeft({ kind: 'MONEY' }, 0), false);
+  const n = normalizeCard({ ...v, originalAmount: 500, usedAt: '2026-06-01' });
+  assert.equal(n.kind, 'VOUCHER');
+  assert.equal(n.originalAmount, 0);
+  assert.equal(n.voucherItem, 'Movie ticket + popcorn');
+  assert.equal(n.usedAt, '2026-06-01');
+  const m = normalizeCard({ merchant: 'A', originalAmount: 100, voucherItem: 'x', usedAt: '2026-01-01' });
+  assert.equal(m.kind, 'MONEY', 'old cards without kind are money');
+  assert.equal(m.voucherItem, '');
+  assert.equal(m.usedAt, '');
 });
 
 test('isBackupOverdue', () => {

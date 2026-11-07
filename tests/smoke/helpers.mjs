@@ -66,6 +66,11 @@ export async function openApp({ port = 0, launchArgs = [], viewport = { width: 3
   };
 }
 
+/** Type a merchant name into the Add/Edit form's Merchant box (a plain text box). */
+export async function setMerchant(page, name) {
+  await page.fill('#merchant', name);
+}
+
 /** Tiny assertion helper for smoke scripts. */
 export function check(condition, message) {
   if (!condition) throw new Error('CHECK FAILED: ' + message);

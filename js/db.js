@@ -9,7 +9,7 @@
 //
 // Every function returns a Promise.
 
-import { normalizeCard, newId } from './model.js';
+import { normalizeCard, newId, DEFAULT_MERCHANT_OPTIONS } from './model.js';
 
 const DB_NAME = 'giftcards';
 const DB_VERSION = 1;
@@ -176,6 +176,27 @@ export async function getMeta(key) {
 
 export function setMeta(key, value) {
   return withTx(['meta'], 'readwrite', (s) => promisify(s.meta.put({ key, value })));
+}
+
+/** meta key: the user's merchant quick-option list (array of strings). */
+export const META_MERCHANT_OPTIONS = 'merchantOptions';
+
+/** The merchant quick options (the user's edited list, or the defaults if never edited). */
+export async function getMerchantOptions() {
+  const list = await getMeta(META_MERCHANT_OPTIONS);
+  return Array.isArray(list) ? list : [...DEFAULT_MERCHANT_OPTIONS];
+}
+
+/** Save the merchant quick options (trimmed, empty and duplicate names removed, case-insensitive). */
+export async function setMerchantOptions(list) {
+  const seen = new Set();
+  const clean = [];
+  for (const name of list) {
+    const n = String(name ?? '').trim();
+    if (n && !seen.has(n.toLowerCase())) { seen.add(n.toLowerCase()); clean.push(n); }
+  }
+  await setMeta(META_MERCHANT_OPTIONS, clean);
+  return clean;
 }
 
 // ---------------------------------------------------------------- bulk (backup / restore)

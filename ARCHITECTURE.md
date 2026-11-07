@@ -40,6 +40,7 @@ js/draft.js                in-memory hand-off: scan/OCR result -> Add form      
 js/dev.js                  demo seed/wipe, loaded on localhost only                (architect)
 js/views/list.js           #/                                                      (A)
 js/views/edit.js           #/add, #/card/:id/edit                                  (B)
+js/views/merchantPicker.js Merchant text box + user-editable quick-options list (used by edit.js)
 js/views/detail.js         #/card/:id                                              (C)
 js/views/scan.js           #/scan                                                  (D)
 js/views/ocrStep.js        last step of the scan flow (not a route)                (E)
@@ -83,10 +84,13 @@ All records are plain objects stored in IndexedDB database `giftcards` (version 
 | Field | Type | Notes |
 |---|---|---|
 | `id` | string | UUID (`newId()`) |
+| `kind` | `'MONEY' \| 'VOUCHER'` | `CARD_KINDS`; missing on old records = MONEY. VOUCHER = non-money gift (movie ticket…) |
 | `merchant` | string | required, trimmed |
+| `voucherItem` | string | VOUCHER only (required): what it is for, e.g. "Movie ticket + popcorn"; `''` for MONEY |
+| `usedAt` | string | VOUCHER only: `'YYYY-MM-DD'` when redeemed, `''` = not used yet; always `''` for MONEY |
 | `cardNumber` | string | may be `''`; stored as entered (spaces allowed) |
 | `pin` | string | optional, `''` if none |
-| `originalAmount` | integer | minor units, > 0 |
+| `originalAmount` | integer | minor units, > 0 for MONEY; always 0 for VOUCHER (vouchers have no transactions) |
 | `currency` | string | ISO 4217; always `'ILS'` (shekel only – kept per card for future flexibility) |
 | `issueDate` | string | `'YYYY-MM-DD'` or `''` |
 | `expiryDate` | string | `'YYYY-MM-DD'` or `''`; must be after `issueDate` when both set |
@@ -192,6 +196,8 @@ getPhoto(id) -> Promise<Blob|undefined>
 deletePhoto(id) -> Promise<void>
 getAllPhotos() -> Promise<{id, blob}[]>
 getMeta(key) -> Promise<any>;  setMeta(key, value) -> Promise<void>
+getMerchantOptions() -> Promise<string[]>   // user's merchant quick options (default DEFAULT_MERCHANT_OPTIONS)
+setMerchantOptions(list) -> Promise<string[]>   // trims, de-duplicates (case-insensitive), saves in meta
 META_LAST_EXPORT = 'lastExportAt'
 clearAll() -> Promise<void>                   // cards + transactions + photos (keeps meta)
 importRecords({ cards, transactions, photos }) -> Promise<void>   // one atomic transaction, overwrites same ids
@@ -202,7 +208,10 @@ requestPersistence() -> Promise<boolean>      // navigator.storage.persist(); ca
 
 ### js/model.js (pure)
 ```js
-CARD_TYPES { PHYSICAL, ELECTRONIC };  STATUS { ACTIVE, EXPIRING, EXPIRED, USED }
+CARD_TYPES { PHYSICAL, ELECTRONIC };  CARD_KINDS { MONEY, VOUCHER };  STATUS { ACTIVE, EXPIRING, EXPIRED, USED }
+isVoucher(card) -> boolean
+hasValueLeft(card, balance) -> boolean      // MONEY: balance > 0; VOUCHER: !usedAt.  Use this, never `balance > 0`
+DEFAULT_MERCHANT_OPTIONS = ['BuyMe', 'DreamCard', 'Fox']   // initial merchant quick options
 DEFAULT_CURRENCY = 'ILS'   // the app's ONLY currency (shekel); no currency picker in the UI
 EXPIRY_SOON_DAYS = 30;  BACKUP_REMINDER_DAYS = 30
 newId() -> string
@@ -214,7 +223,8 @@ todayIso(now?) -> 'YYYY-MM-DD';  toIsoDate(date) -> string;  parseIsoDate(iso) -
 isValidIsoDate(iso) -> boolean;  daysUntil(iso, now?) -> number|null;  formatDate(iso, locale?) -> string
 totalSpent(transactions) -> number;  computeBalance(card, transactions) -> number
 isExpired(card, now?) -> boolean;  isExpiringSoon(card, now?, days?) -> boolean
-cardStatus(card, balance, now?) -> STATUS value;  statusLabel(status) -> string
+cardStatus(card, balance, now?) -> STATUS value    // USED when !hasValueLeft (redeemed voucher / no money left)
+statusLabel(status, card?) -> string               // pass the card: a redeemed voucher reads "Used", money "Used up"
 isBackupOverdue(lastExportIso, now?, days?) -> boolean
 validateCard(card, spent = 0) -> { valid, errors: { merchant?, originalAmount?, currency?, issueDate?, expiryDate?, type?, link? } }
 validateTransaction({ date, amount }, balance) -> { valid, errors: { date?, amount? } }

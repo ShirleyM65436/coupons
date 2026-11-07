@@ -9,11 +9,31 @@
 export const CARD_TYPES = Object.freeze({ PHYSICAL: 'PHYSICAL', ELECTRONIC: 'ELECTRONIC' });
 
 /**
+ * What a card is worth:
+ *  MONEY   - a stored-value card: originalAmount + transactions -> balance (the default)
+ *  VOUCHER - a non-money gift (movie ticket, "coffee + cake", spa treatment...):
+ *            no amount; `voucherItem` says what it is for; `usedAt` is set when redeemed.
+ */
+export const CARD_KINDS = Object.freeze({ MONEY: 'MONEY', VOUCHER: 'VOUCHER' });
+
+/** True for a non-money voucher card. Cards saved before vouchers existed count as MONEY. */
+export function isVoucher(card) {
+  return card?.kind === CARD_KINDS.VOUCHER;
+}
+
+/**
  * The app's only currency: Israeli new shekel (₪). Every card is saved with this currency.
  * (The `currency` field is still stored on each card, so supporting more currencies later
  * only needs a picker in the Add/Edit form again.)
  */
 export const DEFAULT_CURRENCY = 'ILS';
+
+/**
+ * Starting list of merchant "quick options" shown under the Merchant box in Add/Edit.
+ * The user can add/remove options in the app; the edited list is stored in IndexedDB
+ * (db.getMerchantOptions / setMerchantOptions), so this is only the default.
+ */
+export const DEFAULT_MERCHANT_OPTIONS = ['BuyMe', 'DreamCard', 'Fox'];
 
 /** A card counts as "expiring soon" this many days before its expiry date. */
 export const EXPIRY_SOON_DAYS = 30;
@@ -191,16 +211,26 @@ export function isExpiringSoon(card, now = new Date(), days = EXPIRY_SOON_DAYS) 
   return left !== null && left >= 0 && left <= days;
 }
 
-/** One of STATUS.*. A used-up card is USED even if it is also expired. */
+/**
+ * True while the card can still be used: money left, or a voucher not yet redeemed.
+ * (Ignores expiry - combine with isExpired() if needed.)
+ * @param {number} balance  computeBalance(card, transactions); ignored for vouchers
+ */
+export function hasValueLeft(card, balance) {
+  return isVoucher(card) ? !card.usedAt : balance > 0;
+}
+
+/** One of STATUS.*. A used-up card / redeemed voucher is USED even if it is also expired. */
 export function cardStatus(card, balance, now = new Date()) {
-  if (balance <= 0) return STATUS.USED;
+  if (!hasValueLeft(card, balance)) return STATUS.USED;
   if (isExpired(card, now)) return STATUS.EXPIRED;
   if (isExpiringSoon(card, now)) return STATUS.EXPIRING;
   return STATUS.ACTIVE;
 }
 
-/** Human label for a status (for badges). */
-export function statusLabel(status) {
+/** Human label for a status (for badges). Pass the card so a redeemed voucher reads "Used". */
+export function statusLabel(status, card = null) {
+  if (status === STATUS.USED && isVoucher(card)) return 'Used';
   return { active: 'Active', expiring: 'Expiring soon', expired: 'Expired', used: 'Used up' }[status] || status;
 }
 
@@ -223,7 +253,12 @@ export function isBackupOverdue(lastExportIso, now = new Date(), days = BACKUP_R
 export function validateCard(card, spent = 0) {
   const errors = {};
   if (!card.merchant || !String(card.merchant).trim()) errors.merchant = 'Merchant is required.';
-  if (card.originalAmount == null || card.originalAmount === '' || !Number.isInteger(card.originalAmount)) {
+  if (card.kind !== undefined && card.kind !== CARD_KINDS.MONEY && card.kind !== CARD_KINDS.VOUCHER) errors.kind = 'Choose money or voucher.';
+  if (isVoucher(card)) {
+    // A voucher has no amount; it needs a description instead.
+    if (!card.voucherItem || !String(card.voucherItem).trim()) errors.voucherItem = 'Describe what the voucher is for.';
+    if (card.usedAt && !isValidIsoDate(card.usedAt)) errors.usedAt = 'Invalid date.';
+  } else if (card.originalAmount == null || card.originalAmount === '' || !Number.isInteger(card.originalAmount)) {
     errors.originalAmount = 'Enter the card amount.';
   } else if (card.originalAmount <= 0) {
     errors.originalAmount = 'Amount must be greater than 0.';
@@ -262,12 +297,16 @@ export function validateTransaction(tx, balance) {
  */
 export function normalizeCard(input) {
   const str = (v) => (v == null ? '' : String(v).trim());
+  const voucher = input.kind === CARD_KINDS.VOUCHER;
   return {
     id: input.id || newId(),
+    kind: voucher ? CARD_KINDS.VOUCHER : CARD_KINDS.MONEY,
     merchant: str(input.merchant),
     cardNumber: str(input.cardNumber),
     pin: str(input.pin),
-    originalAmount: Number(input.originalAmount) || 0,
+    originalAmount: voucher ? 0 : Number(input.originalAmount) || 0,   // vouchers have no amount
+    voucherItem: voucher ? str(input.voucherItem) : '',
+    usedAt: voucher && input.usedAt ? input.usedAt : '',
     currency: input.currency || DEFAULT_CURRENCY,
     issueDate: input.issueDate || '',
     expiryDate: input.expiryDate || '',

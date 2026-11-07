@@ -1,5 +1,5 @@
-﻿// Smoke test for the Add/Edit view (#/add, #/card/:id/edit). Covers acceptance criteria 1-7.
-import { openApp, check } from './helpers.mjs';
+// Smoke test for the Add/Edit view (#/add, #/card/:id/edit). Covers acceptance criteria 1-7.
+import { openApp, check, setMerchant } from './helpers.mjs';
 
 // 1x1 transparent PNG
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
@@ -22,8 +22,29 @@ export default async function () {
     check(await hasError('originalAmount'), 'empty submit: amount error');
     check(await page.evaluate(() => document.activeElement.id) === 'merchant', 'merchant focused');
     check((await cards()).length === before, 'nothing saved on invalid submit');
-    await page.fill('#merchant', 'x');
-    check(!(await hasError('merchant')), 'editing clears the error');
+
+    // merchant quick options: a list under the text box; picking one fills the box
+    const picks = () => page.locator('.merchant-option-pick').allInnerTexts();
+    await page.click('#merchant');
+    check(await page.locator('#merchant-options').isVisible(), 'quick options open under the merchant box');
+    const initialPicks = await picks();
+    check(['BuyMe', 'DreamCard', 'Fox'].every((o) => initialPicks.includes(o)), 'default quick options BuyMe, DreamCard, Fox');
+    await page.click('.merchant-option-pick:has-text("DreamCard")');
+    check((await page.inputValue('#merchant')) === 'DreamCard', 'picking an option fills the box');
+    check(!(await hasError('merchant')), 'picking a merchant clears the error');
+    // typing filters; a new name can be added to the list, and removed again
+    await page.fill('#merchant', 'Cinema City');
+    check((await picks()).some((t) => t.includes('Add "Cinema City"')), '"Add" entry offered for a new name');
+    await page.click('.merchant-option-add .merchant-option-pick');
+    const stored = await page.evaluate(async () => (await import('./js/db.js')).getMerchantOptions());
+    check(stored.includes('Cinema City'), 'new quick option saved in the database');
+    await page.fill('#merchant', '');
+    await page.click('#merchant');
+    check((await picks()).includes('Cinema City'), 'new option listed');
+    await page.click('[aria-label="Remove Cinema City from quick options"]');
+    const afterRemove = await page.evaluate(async () => (await import('./js/db.js')).getMerchantOptions());
+    check(!afterRemove.includes('Cinema City') && afterRemove.length === 3, 'option removed again');
+    await setMerchant(page, 'x');
 
     // ---- 2. amount 0, expiry <= issue
     await page.fill('#originalAmount', '0');
@@ -53,7 +74,7 @@ export default async function () {
     check(!(await page.locator('#link').isVisible()), 'link hidden again');
 
     // ---- 3. valid save (physical, link typed before switching must be dropped)
-    await page.fill('#merchant', 'Test Shop');
+    await setMerchant(page, 'Test Shop');
     await page.fill('#originalAmount', '25,50');
     check(await page.locator('#currency').count() === 0, 'no currency picker (shekel only)');
     await page.click('button[type=submit]');
@@ -68,6 +89,17 @@ export default async function () {
     }
     check(await page.evaluate(() => location.hash) === `#/card/${saved.id}`, 'navigated to detail');
 
+    // a dropdown merchant saves as-is and is pre-selected when editing
+    await app.goto('#/add');
+    await setMerchant(page, 'BuyMe');
+    await page.fill('#originalAmount', '557');
+    await page.click('button[type=submit]');
+    await page.waitForTimeout(500);
+    const buyme = (await cards()).find((c) => c.merchant === 'BuyMe');
+    check(!!buyme, 'dropdown merchant "BuyMe" saved');
+    await app.goto(`#/card/${buyme.id}/edit`);
+    check((await page.inputValue('#merchant')) === 'BuyMe', 'edit shows the saved merchant in the box');
+
     // ---- 5. edit BookNook
     const ids = await app.cardIds();
     const bn = (await cards()).find((c) => c.id === ids.BookNook);
@@ -79,7 +111,7 @@ export default async function () {
     await page.click('button[type=submit]');
     check(await hasError('originalAmount'), 'amount below spent rejected');
     await page.fill('#originalAmount', '50.00');
-    await page.fill('#merchant', 'BookNook 2');
+    await setMerchant(page, 'BookNook 2');
     await page.click('button[type=submit]');
     await page.waitForTimeout(500);
     const bn2 = (await cards()).find((c) => c.id === ids.BookNook);
@@ -102,7 +134,7 @@ export default async function () {
 
     // ---- 7a. add with photo
     await app.goto('#/add');
-    await page.fill('#merchant', 'Photo Shop');
+    await setMerchant(page, 'Photo Shop');
     await page.fill('#originalAmount', '10');
     await page.setInputFiles('#photo', { name: 'p.png', mimeType: 'image/png', buffer: PNG });
     await page.waitForSelector('.edit-photo-preview[src]');
