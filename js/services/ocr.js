@@ -108,6 +108,10 @@ export async function terminateOcr() {
   const pending = workerPromise;
   worker = null;
   workerPromise = null;
+  // A call that was in flight dies with its worker and may never settle: don't make later
+  // calls wait behind it.
+  queue = Promise.resolve();
+  report = null;
   if (!pending) return;
   try {
     const w = await pending;

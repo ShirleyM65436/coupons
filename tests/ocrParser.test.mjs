@@ -330,7 +330,10 @@ test('card: 8-11 digits accepted with low confidence, 12-19 preferred', () => {
   const r = parseOcrText('12345678901\nCard No 6035 7712 3456 7890');
   assert.equal(r.cardNumber, '6035771234567890');
   assert.equal(parseOcrText('1234567').cardNumber, null);       // too short
-  // 24 digits: trailing groups are cut off, with lower confidence than a clean 16-digit number\r\n  const long = parseOcrText('1234 5678 9012 3456 7890 1234');\r\n  assert.equal(long.cardNumber, '1234567890123456');\r\n  assert.ok(long.confidence.cardNumber < parseOcrText('1234 5678 9012 3456').confidence.cardNumber);
+  // 24 digits: trailing groups are cut off, with lower confidence than a clean 16-digit number
+  const long = parseOcrText('1234 5678 9012 3456 7890 1234');
+  assert.equal(long.cardNumber, '1234567890123456');
+  assert.ok(long.confidence.cardNumber < parseOcrText('1234 5678 9012 3456').confidence.cardNumber);
 });
 
 test('card: separators (spaces, dashes) are removed; 15-digit Amex style works', () => {
