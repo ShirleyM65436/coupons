@@ -12,6 +12,65 @@ import {
 let searchText = '';
 let filter = 'active';
 
+// "cards" (one row per card) or "merchants" (one row per merchant). Also saved in
+// localStorage so the choice survives a reload; storage can be blocked, so never throw.
+const MODE_KEY = 'giftcards.listMode';
+function loadMode() {
+  try { return localStorage.getItem(MODE_KEY) === 'merchants' ? 'merchants' : 'cards'; } catch { return 'cards'; }
+}
+function saveMode(mode) {
+  try { localStorage.setItem(MODE_KEY, mode); } catch { /* storage unavailable: keep in memory only */ }
+}
+let listMode = loadMode();
+// Merchant (lower-case key) currently opened in "By merchant" mode, or '' for the group rows.
+let drilled = '';
+
+/** Case-insensitive, trimmed grouping key for a merchant name. */
+const merchantKey = (card) => card.merchant.trim().toLowerCase();
+
+/** "1 card" / "3 cards" */
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+/**
+ * Sum what is still usable in a list of items, per currency (money cards that are
+ * active or expiring; expired and used-up money does not count). Vouchers are counted.
+ */
+function summarize(list) {
+  const totals = new Map();
+  let vouchers = 0, expiring = 0, money = 0;
+  for (const i of list) {
+    if (i.status === STATUS.EXPIRING) expiring++;
+    if (isVoucher(i.card)) { vouchers++; continue; }
+    money++;
+    if (i.status === STATUS.ACTIVE || i.status === STATUS.EXPIRING) {
+      totals.set(i.card.currency, (totals.get(i.card.currency) || 0) + i.balance);
+    }
+  }
+  const totalText = [...totals].map(([cur, sum]) => formatMoney(sum, cur)).join(' + ');
+  const sum = [...totals.values()].reduce((a, b) => a + b, 0);
+  return { totalText, sum, vouchers, expiring, money };
+}
+
+/** Build merchant groups from the filtered items, biggest available total first. */
+function buildGroups(list) {
+  const map = new Map(); // key -> { key, spellings: Map(name -> count), items }
+  for (const i of list) {
+    const key = merchantKey(i.card);
+    if (!map.has(key)) map.set(key, { key, spellings: new Map(), items: [] });
+    const g = map.get(key);
+    g.items.push(i);
+    const name = i.card.merchant.trim();
+    g.spellings.set(name, (g.spellings.get(name) || 0) + 1);
+  }
+  const groups = [...map.values()].map((g) => {
+    // Most common spelling wins; Map keeps insertion order, so ties go to the first seen.
+    let name = '', best = 0;
+    for (const [n, c] of g.spellings) if (c > best) { name = n; best = c; }
+    return { key: g.key, name, items: g.items, ...summarize(g.items) };
+  });
+  return groups.sort((a, b) => (b.sum - a.sum) || a.name.localeCompare(b.name));
+}
+
 const FILTERS = [
   ['active', 'Active'],
   ['used', 'Used up'],
@@ -163,35 +222,95 @@ export async function render(container, params) {
     const matchesSearch = (card) => card.merchant.toLowerCase().includes(q) || (card.owner || '').toLowerCase().includes(q);
     const shown = items.filter((i) => matchesFilter(i.status) && matchesSearch(i.card));
 
+    modeRadios.forEach((r) => { r.checked = r.value === listMode; });
+
+    const noMatch = () => el('div', { class: 'empty-state' },
+      el('h2', {}, 'No cards match'),
+      el('p', {}, 'Try a different search, or choose another filter such as "All".'),
+    );
+
     // Summary: count, plus total remaining balance per currency of the shown usable cards.
     // Money totals count money cards only; vouchers are just counted.
-    const totals = new Map();
-    let voucherCount = 0;
-    for (const i of shown) {
-      if (isVoucher(i.card)) { voucherCount++; continue; }
-      if (i.status === STATUS.ACTIVE || i.status === STATUS.EXPIRING) {
-        totals.set(i.card.currency, (totals.get(i.card.currency) || 0) + i.balance);
-      }
-    }
-    const totalText = [...totals].map(([cur, sum]) => formatMoney(sum, cur)).join(' + ');
-    summary.textContent = `${shown.length} ${shown.length === 1 ? 'card' : 'cards'}`
-      + (totalText ? ` · ${totalText} available` : '')
-      + (voucherCount ? ` · ${voucherCount} ${voucherCount === 1 ? 'voucher' : 'vouchers'}` : '');
+    const describe = (s, head) => head
+      + (s.totalText ? ` · ${s.totalText} available` : '')
+      + (s.vouchers ? ` · ${plural(s.vouchers, 'voucher')}` : '');
 
-    if (!shown.length) {
-      listBox.replaceChildren(el('div', { class: 'empty-state' },
-        el('h2', {}, 'No cards match'),
-        el('p', {}, 'Try a different search, or choose another filter such as "All".'),
-      ));
-    } else {
-      listBox.replaceChildren(...shown.map(cardRow));
+    if (listMode === 'cards') {
+      summary.textContent = describe(summarize(shown), plural(shown.length, 'card'));
+      listBox.replaceChildren(...(shown.length ? shown.map(cardRow) : [noMatch()]));
+      return;
     }
+
+    // --- "By merchant" mode
+    const groups = buildGroups(shown);
+    const open = drilled ? groups.find((g) => g.key === drilled) : null;
+
+    if (drilled) {
+      // Drill-down: a header bar with a back control, then the normal card rows.
+      // If the filters removed every card of this merchant, keep the bar and show the empty state.
+      const name = open ? open.name : (items.find((i) => merchantKey(i.card) === drilled)?.card.merchant.trim() || '');
+      summary.textContent = open ? describe(open, plural(open.items.length, 'card')) : '0 cards';
+      listBox.replaceChildren(
+        el('div', { class: 'list-drill' },
+          el('button', { type: 'button', class: 'btn list-drill-back', onclick: () => { drilled = ''; update(); } }, '← All merchants'),
+          el('div', { class: 'list-drill-title' },
+            el('div', { class: 'list-card-merchant' }, name),
+            open ? el('div', { class: 'list-group-total' }, groupTotal(open)) : null),
+        ),
+        ...(open ? open.items.map(cardRow) : [noMatch()]),
+      );
+      return;
+    }
+
+    summary.textContent = describe(summarize(shown), plural(groups.length, 'merchant'));
+    listBox.replaceChildren(...(groups.length ? groups.map(groupRow) : [noMatch()]));
   }
+
+  /** What the group row/header shows as its amount: money available, or the voucher count. */
+  function groupTotal(g) {
+    if (g.money) return `${g.totalText || formatMoney(0)} available`;
+    return plural(g.vouchers, 'voucher');
+  }
+
+  /** One merchant row: name, available total, "6 cards · 2 vouchers". Opens the drill-down. */
+  function groupRow(g) {
+    const parts = [plural(g.items.length, 'card')];
+    if (g.vouchers && g.money) parts.push(plural(g.vouchers, 'voucher'));
+    // A voucher-only group already says "2 vouchers" as its main text, so show plain count there.
+    const detail = g.money ? parts.join(' · ') : '';
+    return el('button', {
+      type: 'button', class: `card list-card list-group${g.expiring ? ' status-expiring' : ''}`,
+      onclick: () => { drilled = g.key; update(); window.scrollTo(0, 0); },
+    },
+      el('div', { class: 'list-card-main' },
+        el('div', { class: 'list-card-merchant' }, g.name),
+        detail ? el('div', { class: 'muted small' }, detail) : null,
+        g.expiring ? el('div', { class: 'small list-group-warn' }, `${g.expiring} expiring soon`) : null,
+      ),
+      el('div', { class: 'list-card-side' },
+        el('div', { class: 'list-card-balance' }, g.money ? (g.totalText || formatMoney(0)) : plural(g.vouchers, 'voucher')),
+        g.money ? el('span', { class: 'small muted' }, 'available') : null,
+        g.money ? null : el('span', { class: 'small muted' }, plural(g.items.length, 'card')),
+      ),
+    );
+  }
+
+  // Cards | By merchant toggle (radios inside the shared .segmented component).
+  const modeRadios = [['cards', 'Cards', 'mode-cards'], ['merchants', 'By merchant', 'mode-merchant']].map(([value, , id]) =>
+    el('input', {
+      type: 'radio', name: 'list-mode', id, value, checked: value === listMode,
+      onchange: () => { listMode = value; saveMode(value); if (value === 'cards') drilled = ''; update(); },
+    }));
+  const modeToggle = el('div', { class: 'segmented list-mode', role: 'radiogroup', 'aria-label': 'List view' },
+    el('label', {}, modeRadios[0], el('span', {}, 'Cards')),
+    el('label', {}, modeRadios[1], el('span', {}, 'By merchant')),
+  );
 
   container.append(
     el('div', { class: 'stack' },
       expiringBanner(items),
       el('a', { class: 'btn btn-primary btn-block list-scan', href: '#/scan' }, icon('camera'), 'Scan card'),
+      modeToggle,
       el('div', { class: 'field list-search' },
         el('label', { class: 'visually-hidden', for: 'list-search-input' }, 'Search'),
         searchInput,

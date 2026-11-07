@@ -53,15 +53,16 @@ Runs the headless browser smoke tests (Playwright) for every screen and flow, us
 
 GitHub Pages serves the files as they are; there is no build step.
 
-1. Create a GitHub repository and push this folder to it. `node_modules/` is git-ignored. **`vendor/` must be committed**, because it holds the offline copies of the libraries.
-   ```bash
-   git remote add origin https://github.com/<you>/<repo>.git
-   ```
+This project's repository is **https://github.com/ShirleyM65436/coupons** (already set as the `origin` remote).
+
+1. Push this folder to it. `node_modules/` and `.certs/` are git-ignored. **`vendor/` must be committed**, because it holds the offline copies of the libraries.
    ```bash
    git push -u origin main
    ```
-2. On GitHub, go to **Settings → Pages**. Set **Source** to "Deploy from a branch", **Branch** to `main`, folder `/ (root)`, and save.
-3. After a minute the app is live at `https://<you>.github.io/<repo>/`. All paths in the app are relative, so the sub-folder works.
+2. On GitHub, go to **Settings → Pages**. Set **Source** to "Deploy from a branch", **Branch** to `main`, folder `/ (root)`, and save. On a free GitHub account the repository must be **public**. That's safe: it only contains the app's code, and your cards live only on your phone.
+3. After a minute the app is live at **https://shirleym65436.github.io/coupons/**. All paths in the app are relative, so the sub-folder works.
+
+The empty `.nojekyll` file tells GitHub Pages to publish the files exactly as they are, without its Jekyll processing.
 
 **Every time you deploy a change:** open `sw.js` and bump `CACHE_VERSION` (e.g. `'v1'` → `'v2'`). Otherwise installed copies keep serving the old cached files. If you add or remove a file, run `npm test`: `tests/sw.test.mjs` tells you exactly which entries of the `PRECACHE` list in `sw.js` need updating (`node scripts/precache-list.mjs` prints the full list).
 

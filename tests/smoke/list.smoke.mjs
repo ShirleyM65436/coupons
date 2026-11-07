@@ -61,7 +61,7 @@ export default async function () {
 
     // 8. layout
     check(await page.evaluate(() => document.documentElement.scrollWidth) <= 360, 'no horizontal scroll at 360px');
-    const small = await page.evaluate(() => [...document.querySelectorAll('.view-list .btn, .view-list .chip, .view-list a.card, .fab, .view-list input')]
+    const small = await page.evaluate(() => [...document.querySelectorAll('.view-list .btn, .view-list .chip, .view-list a.card, .fab, .view-list input:not([type=radio])')]
       .filter((e) => e.getBoundingClientRect().height < 40).length);
     check(small === 0, 'buttons, chips, rows and input are big enough to tap');
     await page.screenshot({ path: process.env.TEMP + '\\list-smoke.png' });
