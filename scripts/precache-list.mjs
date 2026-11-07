@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
-const EXCLUDED_DIRS = new Set(['node_modules', 'tests', 'scripts', '.claude', '.git', 'test-results']);
+const EXCLUDED_DIRS = new Set(['node_modules', 'tests', 'scripts', '.claude', '.git', '.certs', 'test-results']);
 const EXCLUDED_FILES = new Set(['package.json', 'package-lock.json', '.gitignore', 'sw.js']);
 
 function isExcluded(relPath) {

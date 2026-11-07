@@ -1,4 +1,6 @@
 node_modules/
+# Local HTTPS certificates + private keys (scripts/make-cert.mjs). Never commit or deploy these.
+.certs/
 test-results/
 *.log
 # vendor/ is committed on purpose: GitHub Pages serves it. Regenerate with `npm run vendor`.

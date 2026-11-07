@@ -6,6 +6,13 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["start"],
       "port": 8080
+    },
+    {
+      "name": "gift-cards-https",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start:https"],
+      "port": 8443,
+      "url": "https://localhost:8443"
     }
   ]
 }

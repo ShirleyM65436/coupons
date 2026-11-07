@@ -5,7 +5,9 @@
     "test": "node --test tests/**/*.test.mjs",
     "vendor": "node scripts/vendor.mjs",
     "start": "node scripts/serve.mjs",
-    "smoke": "node tests/smoke/run.mjs"
+    "smoke": "node tests/smoke/run.mjs",
+    "cert": "node scripts/make-cert.mjs",
+    "start:https": "node scripts/serve.mjs --https"
   },
   "type": "module",
   "devDependencies": {

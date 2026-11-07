@@ -65,6 +65,21 @@ GitHub Pages serves the files as they are; there is no build step.
 
 **Every time you deploy a change:** open `sw.js` and bump `CACHE_VERSION` (e.g. `'v1'` → `'v2'`). Otherwise installed copies keep serving the old cached files. If you add or remove a file, run `npm test`: `tests/sw.test.mjs` tells you exactly which entries of the `PRECACHE` list in `sw.js` need updating (`node scripts/precache-list.mjs` prints the full list).
 
+## Install from this PC over Wi-Fi (HTTPS, no GitHub needed)
+
+Chrome only installs apps from HTTPS. A plain `http://10.0.0.x` address gives "This app can't be installed". To serve real HTTPS on your home network:
+
+1. **Once on the PC:** create the certificates (needs openssl, which comes with Git for Windows).
+   ```bash
+   npm run cert
+   ```
+   This creates your own small certificate authority (CA) in `.certs/` (git-ignored, never served or deployed). The CA is *name constrained*: it can only vouch for addresses in your local network (e.g. `10.0.0.x`) and `localhost`, never for internet sites.
+2. **Start both servers:** `npm start` (http, port 8080) and `npm run start:https` (https, port 8443).
+3. **Once on the phone:** open `http://<PC-IP>:8080/local-ca.crt` in Chrome to download the certificate. Then go to Android **Settings → Security (& privacy) → More security settings → Encryption & credentials → Install a certificate → CA certificate**, and pick `giftcards-local-ca.crt`. Android will warn that "network traffic may be monitored". That is the standard warning for any added CA; this one can only cover your home network.
+4. On the phone open **`https://<PC-IP>:8443`**. It opens without a warning and can be installed (⋮ → **Install app**). Open it once fully so it caches everything for offline use.
+
+If the router gives the PC a new IP, run `npm run cert` again: it keeps the CA, so there's nothing new to install on the phone. Note that a new address counts as a different app with separate data, so move your cards with Backup → Export / Import. To remove the CA from the phone later: Settings → Encryption & credentials → User credentials.
+
 ## Install on Android (as an app)
 
 1. Open the GitHub Pages URL in **Chrome** on the phone.
