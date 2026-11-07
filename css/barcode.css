@@ -1,0 +1,43 @@
+/* barcode.css - styles for the barcode view. Scope every selector under .view-barcode */
+
+/* The panel is ALWAYS white with black ink, even in dark mode, so scanners can read it. */
+.view-barcode .barcode-panel {
+  background: #ffffff;
+  color: #000000;
+  border-radius: var(--radius);
+  padding: 12px;
+  width: 100%;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.view-barcode .barcode-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  background: #ffffff;
+}
+
+/* QR: square, about 80% of the viewport width, capped at 420px */
+.view-barcode .barcode-qr {
+  width: min(80vw, 420px);
+  aspect-ratio: 1 / 1;
+  max-width: 100%;
+}
+.view-barcode .barcode-qr .barcode-svg { height: 100%; }
+
+.view-barcode .barcode-hint { font-weight: 600; margin: 0; }
+.view-barcode .barcode-status { margin: 0; }
+.view-barcode .barcode-note { margin: 0; }
+
+.view-barcode .barcode-info-row { display: flex; flex-direction: column; gap: 2px; }
+.view-barcode .barcode-merchant { font-size: var(--text-large); font-weight: 700; }
+.view-barcode .barcode-info-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
