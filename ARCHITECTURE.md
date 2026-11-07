@@ -87,7 +87,7 @@ All records are plain objects stored in IndexedDB database `giftcards` (version 
 | `cardNumber` | string | may be `''`; stored as entered (spaces allowed) |
 | `pin` | string | optional, `''` if none |
 | `originalAmount` | integer | minor units, > 0 |
-| `currency` | string | ISO 4217, e.g. `'EUR'` |
+| `currency` | string | ISO 4217; always `'ILS'` (shekel only – kept per card for future flexibility) |
 | `issueDate` | string | `'YYYY-MM-DD'` or `''` |
 | `expiryDate` | string | `'YYYY-MM-DD'` or `''`; must be after `issueDate` when both set |
 | `type` | `'PHYSICAL' \| 'ELECTRONIC'` | `CARD_TYPES` |
@@ -203,7 +203,8 @@ requestPersistence() -> Promise<boolean>      // navigator.storage.persist(); ca
 ### js/model.js (pure)
 ```js
 CARD_TYPES { PHYSICAL, ELECTRONIC };  STATUS { ACTIVE, EXPIRING, EXPIRED, USED }
-DEFAULT_CURRENCY = 'EUR';  COMMON_CURRENCIES: string[];  EXPIRY_SOON_DAYS = 30;  BACKUP_REMINDER_DAYS = 30
+DEFAULT_CURRENCY = 'ILS'   // the app's ONLY currency (shekel); no currency picker in the UI
+EXPIRY_SOON_DAYS = 30;  BACKUP_REMINDER_DAYS = 30
 newId() -> string
 isValidCurrency(code) -> boolean;  minorDigits(currency) -> number
 formatMoney(minor, currency, locale?) -> string
@@ -357,9 +358,8 @@ actions: Backup (`#/backup`). Primary actions: "Scan" (`#/scan`) and "Add" (`#/a
 secondary button. Sort: expiring/active by soonest expiry (no expiry last), then expired, then used up.
 
 **B – Add/Edit (`views/edit.js`, `css/edit.css`).** One form for `#/add` and `#/card/:id/edit`. All
-GiftCard fields: merchant, type (segmented Physical/Electronic), link (shown only for Electronic), amount +
-currency (select from `COMMON_CURRENCIES`, default = currency of the most recently created card, else
-`DEFAULT_CURRENCY`), card number, PIN, issue date, expiry date, barcode value + format (select from
+GiftCard fields: merchant, type (segmented Physical/Electronic), link (shown only for Electronic), amount in ₪
+(no currency picker: every card is saved with `DEFAULT_CURRENCY` 'ILS'), card number, PIN, issue date, expiry date, barcode value + format (select from
 `BARCODE_FORMATS`), optional photo (file input `accept="image/*"`, downscaled with `downscaleImage`;
 show preview; allow removing), notes. Validate with `validateCard` (when editing pass `totalSpent` of the
 card's transactions) and show errors inline per field; focus the first invalid field. On `#/add` read

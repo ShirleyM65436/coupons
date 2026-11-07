@@ -19,8 +19,8 @@ export default async function () {
 
     // 2. balances
     const rowText = (m) => page.locator('.view-list a.card', { hasText: m }).innerText();
-    check((await rowText('BookNook')).includes('€29.51'), 'BookNook balance is €29.51');
-    check((await rowText('StreamFlix')).includes('$20.01'), 'StreamFlix balance is $20.01');
+    check((await rowText('BookNook')).includes('₪29.51'), 'BookNook balance is ₪29.51');
+    check((await rowText('StreamFlix')).includes('₪20.01'), 'StreamFlix balance is ₪20.01');
     check((await rowText('Tech Store')).includes('No expiry'), 'Tech Store shows "No expiry"');
 
     // 3. banner

@@ -81,7 +81,7 @@ export default async function () {
     await page.waitForSelector('input[name="cardNumber"]');
     check((await val('barcodeValue')) === '4006381333931' && (await val('barcodeFormat')) === 'ean_13', 'offline: barcode decoded');
     check((await val('expiryDate')) === '2027-12-31', `offline: OCR expiry (${await val('expiryDate')})`);
-    check((await val('originalAmount')) === '25.00' && (await val('currency')) === 'EUR', 'offline: OCR amount 25.00 EUR');
+    check((await val('originalAmount')) === '25.00', 'offline: OCR amount 25.00');
     await page.fill('input[name="merchant"]', 'Scanned Store');
     await page.click('button[type=submit]');
     await hashStartsWith('#/card/');

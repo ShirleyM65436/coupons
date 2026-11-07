@@ -61,7 +61,7 @@ export default async function () {
     check((await val('barcodeFormat')) === 'ean_13', `barcode format ean_13 (${await val('barcodeFormat')})`);
     check((await val('expiryDate')) === '2027-12-31', `expiry read by OCR (${await val('expiryDate')})`);
     check((await val('originalAmount')) === '25.00', `amount read by OCR (${await val('originalAmount')})`);
-    check((await val('currency')) === 'EUR', `currency read by OCR (${await val('currency')})`);
+    check((await page.locator('#currency').count()) === 0, 'no currency picker (shekel only)');
     check(await page.isVisible('.edit-photo-preview'), 'photo preview visible');
     const ocrText = await page.locator('.edit-ocr').textContent();
     check(ocrText.includes('6035'), 'recognized text contains the OCR card number');

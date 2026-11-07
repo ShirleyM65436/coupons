@@ -13,8 +13,8 @@ export default async function () {
     // ---- 1. BookNook summary
     await app.goto(`#/card/${ids.BookNook}`);
     let t = await text();
-    check(/29[.,]51/.test(t) && t.includes('€'), 'BookNook balance 29.51');
-    check(/of\s+€\s?50[.,]00/.test(t), 'shows original amount');
+    check(/29[.,]51/.test(t) && t.includes('₪'), 'BookNook balance ₪29.51');
+    check(/of\s+₪\s?50[.,]00/.test(t), 'shows original amount');
     check(await page.locator('.badge-active').count() === 1, 'Active badge');
     check(/in \d+ days/.test(t), 'expiry shows "in N days"');
     check(await page.getByText('Show barcode').count() === 1, 'Show barcode button');

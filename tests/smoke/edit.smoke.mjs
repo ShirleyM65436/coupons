@@ -55,22 +55,18 @@ export default async function () {
     // ---- 3. valid save (physical, link typed before switching must be dropped)
     await page.fill('#merchant', 'Test Shop');
     await page.fill('#originalAmount', '25,50');
-    await page.selectOption('#currency', 'CHF');
+    check(await page.locator('#currency').count() === 0, 'no currency picker (shekel only)');
     await page.click('button[type=submit]');
     await page.waitForTimeout(500);
     const all = await cards();
     const saved = all.find((c) => c.merchant === 'Test Shop');
     check(!!saved, 'card saved');
-    check(saved.originalAmount === 2550 && saved.currency === 'CHF', 'amount 2550 CHF');
+    check(saved.originalAmount === 2550 && saved.currency === 'ILS', 'amount 2550 ILS');
     check(saved.link === '' && saved.type === 'PHYSICAL', 'physical card has empty link');
     for (const k of ['id', 'merchant', 'cardNumber', 'pin', 'originalAmount', 'currency', 'issueDate', 'expiryDate', 'type', 'link', 'barcodeValue', 'barcodeFormat', 'photoId', 'notes', 'createdAt']) {
       check(k in saved, `field ${k} present`);
     }
     check(await page.evaluate(() => location.hash) === `#/card/${saved.id}`, 'navigated to detail');
-
-    // default currency = newest card's currency
-    await app.goto('#/add');
-    check((await page.locator('#currency').inputValue()) === 'CHF', 'default currency from newest card');
 
     // ---- 5. edit BookNook
     const ids = await app.cardIds();
@@ -120,7 +116,7 @@ export default async function () {
     await page.evaluate(async () => {
       const { setDraft } = await import('./js/draft.js');
       setDraft({
-        card: { cardNumber: '6035 7712', barcodeValue: '6035771', barcodeFormat: 'ean_8', expiryDate: '2027-12-31', originalAmount: 2500, currency: 'USD' },
+        card: { cardNumber: '6035 7712', barcodeValue: '6035771', barcodeFormat: 'ean_8', expiryDate: '2027-12-31', originalAmount: 2500 },
         confidence: { expiryDate: 0.4, originalAmount: 0.9 },
         ocrText: 'VALID THRU 12/27',
       });
@@ -128,7 +124,6 @@ export default async function () {
     await app.goto('#/add');
     check((await page.locator('#cardNumber').inputValue()) === '6035 7712', 'draft card number');
     check((await page.locator('#originalAmount').inputValue()) === '25.00', 'draft amount 25.00');
-    check((await page.locator('#currency').inputValue()) === 'USD', 'draft currency');
     check((await page.locator('#barcodeFormat').inputValue()) === 'ean_8', 'draft barcode format');
     check((await page.locator('#expiryDate').inputValue()) === '2027-12-31', 'draft expiry');
     check(await page.locator('[data-field="expiryDate"].needs-check').count() === 1, 'expiry needs-check');

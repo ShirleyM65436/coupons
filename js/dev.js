@@ -41,19 +41,19 @@ export async function seedDemoData(force = false) {
   const photoId = await putPhoto(await demoPhoto('BookNook'));
 
   const cards = [
-    { merchant: 'BookNook', cardNumber: '6035771234567890', pin: '4821', originalAmount: 5000, currency: 'EUR',
+    { merchant: 'BookNook', cardNumber: '6035771234567890', pin: '4821', originalAmount: 5000, currency: 'ILS',
       issueDate: inDays(-60), expiryDate: inDays(400), type: 'PHYSICAL', barcodeValue: '4006381333931', barcodeFormat: 'ean_13',
       photoId, notes: 'Birthday present from Anna' },
-    { merchant: 'Coffee Corner', cardNumber: '7777 1234 5678', originalAmount: 2500, currency: 'EUR',
+    { merchant: 'Coffee Corner', cardNumber: '7777 1234 5678', originalAmount: 2500, currency: 'ILS',
       expiryDate: inDays(12), type: 'PHYSICAL', barcodeValue: '77771234567812', barcodeFormat: 'code_128' },
-    { merchant: 'StreamFlix', cardNumber: 'SFX-9QK2-77LM-0P3A', pin: '0099', originalAmount: 3000, currency: 'USD',
+    { merchant: 'StreamFlix', cardNumber: 'SFX-9QK2-77LM-0P3A', pin: '0099', originalAmount: 3000, currency: 'ILS',
       issueDate: inDays(-20), expiryDate: inDays(25), type: 'ELECTRONIC', link: 'https://example.com/redeem',
       barcodeValue: 'https://example.com/redeem?code=SFX-9QK2-77LM-0P3A', barcodeFormat: 'qr_code' },
-    { merchant: 'Garden World', cardNumber: '1200 3300 4400', originalAmount: 10000, currency: 'EUR',
+    { merchant: 'Garden World', cardNumber: '1200 3300 4400', originalAmount: 10000, currency: 'ILS',
       issueDate: inDays(-500), expiryDate: inDays(-5), type: 'PHYSICAL', notes: 'Expired last week' },
-    { merchant: 'Pizza Palace', cardNumber: '5555666677778888', originalAmount: 2000, currency: 'EUR',
+    { merchant: 'Pizza Palace', cardNumber: '5555666677778888', originalAmount: 2000, currency: 'ILS',
       expiryDate: inDays(200), type: 'PHYSICAL' },
-    { merchant: 'Tech Store', originalAmount: 15000, currency: 'GBP', type: 'ELECTRONIC', link: 'https://example.com/tech' },
+    { merchant: 'Tech Store', originalAmount: 15000, currency: 'ILS', type: 'ELECTRONIC', link: 'https://example.com/tech' },
   ];
 
   const saved = [];

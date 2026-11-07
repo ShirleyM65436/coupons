@@ -6,11 +6,11 @@
 
 import { el, setHeader, navigate, toast } from '../ui.js';
 import {
-  CARD_TYPES, COMMON_CURRENCIES, DEFAULT_CURRENCY,
+  CARD_TYPES, DEFAULT_CURRENCY,
   validateCard, parseAmountInput, minorToInputString, totalSpent,
 } from '../model.js';
 import {
-  getAllCards, getCard, getTransactions, putCard, putPhoto, getPhoto, deletePhoto,
+  getCard, getTransactions, putCard, putPhoto, getPhoto, deletePhoto,
 } from '../db.js';
 import { getDraft, clearDraft } from '../draft.js';
 import { downscaleImage } from '../services/photo.js';
@@ -19,7 +19,10 @@ import { BARCODE_FORMATS } from '../services/scanner.js';
 // Fields whose OCR confidence below this value are marked "please check".
 const LOW_CONFIDENCE = 0.6;
 // Order in which fields appear (used to focus the first invalid one).
-const FIELD_ORDER = ['merchant', 'type', 'link', 'originalAmount', 'currency', 'issueDate', 'expiryDate'];
+const FIELD_ORDER = ['merchant', 'type', 'link', 'originalAmount', 'issueDate', 'expiryDate'];
+
+// The app uses a single currency (shekel), so there is no currency picker.
+const CURRENCY = DEFAULT_CURRENCY;
 
 // Object URLs created by this view; revoked in cleanup().
 let objectUrls = [];
@@ -62,17 +65,11 @@ export async function render(container, params = {}) {
   const confidence = draft?.confidence || {};
 
   // Initial values: the existing card, else draft values, else defaults.
-  let defaultCurrency = DEFAULT_CURRENCY;
-  if (!isEdit) {
-    const all = await getAllCards(); // newest first
-    if (all[0]?.currency) defaultCurrency = all[0].currency;
-  }
   const src = existing || draftCard;
   const initial = {
     merchant: src.merchant || '',
     type: src.type === CARD_TYPES.ELECTRONIC ? CARD_TYPES.ELECTRONIC : CARD_TYPES.PHYSICAL,
     link: src.link || '',
-    currency: src.currency || defaultCurrency,
     cardNumber: src.cardNumber || '',
     pin: src.pin || '',
     issueDate: src.issueDate || '',
@@ -82,7 +79,7 @@ export async function render(container, params = {}) {
     notes: src.notes || '',
   };
   initial.amount = src.originalAmount != null && src.originalAmount !== ''
-    ? minorToInputString(src.originalAmount, initial.currency) : '';
+    ? minorToInputString(src.originalAmount, CURRENCY) : '';
 
   // Photo state. `blob` = new photo to store; `removed` = existing photo to drop.
   const photo = { blob: null, url: '', removed: false };
@@ -165,11 +162,6 @@ export async function render(container, params = {}) {
 
   const amount = el('input', { id: 'originalAmount', name: 'originalAmount', type: 'text', inputmode: 'decimal', value: initial.amount, placeholder: '0.00', autocomplete: 'off', 'aria-required': 'true' });
 
-  // Currency: the common list plus whatever the card/draft already uses.
-  const currencies = COMMON_CURRENCIES.includes(initial.currency) ? COMMON_CURRENCIES : [initial.currency, ...COMMON_CURRENCIES];
-  const currency = el('select', { id: 'currency', name: 'currency' },
-    ...currencies.map((c) => el('option', { value: c, selected: c === initial.currency }, c)));
-
   const cardNumber = textInput('cardNumber', initial.cardNumber, { autocomplete: 'off', autocapitalize: 'characters' });
   const pin = textInput('pin', initial.pin, { autocomplete: 'off' }); // text: PINs may contain letters
   const issueDate = el('input', { id: 'issueDate', name: 'issueDate', type: 'date', value: initial.issueDate });
@@ -229,9 +221,7 @@ export async function render(container, params = {}) {
     field('merchant', 'Merchant', merchant),
     field('type', 'Type', typeGroup, { labelFor: 'type-PHYSICAL' }),
     linkField,
-    el('div', { class: 'edit-amount-row' },
-      field('originalAmount', 'Amount', amount),
-      field('currency', 'Currency', currency)),
+    field('originalAmount', 'Amount (₪)', amount),
     field('cardNumber', 'Card number', cardNumber),
     field('pin', 'PIN', pin),
     el('div', { class: 'edit-date-row' },
@@ -263,7 +253,7 @@ export async function render(container, params = {}) {
     // Clear previous errors, then collect values.
     Object.keys(fieldEls).forEach(clearError);
     const type = form.querySelector('input[name="type"]:checked')?.value || CARD_TYPES.PHYSICAL;
-    const cur = currency.value;
+    const cur = CURRENCY;
     const amountText = amount.value.trim();
     const parsedAmount = amountText ? parseAmountInput(amountText, cur) : null;
     const bcValue = barcodeValue.value.trim();

@@ -16,6 +16,7 @@ import { toast, navigate } from '../ui.js';
 import { setDraft } from '../draft.js';
 import { recognizeText, terminateOcr } from '../services/ocr.js';
 import { parseOcrText } from '../services/ocrParser.js';
+import { DEFAULT_CURRENCY } from '../model.js';
 
 let currentRun = null; // the run in progress, so a new run can end it
 
@@ -47,7 +48,7 @@ function ocrFields(parsed) {
   put('cardNumber', parsed.cardNumber, parsed.confidence.cardNumber);
   put('expiryDate', parsed.expiryDate, parsed.confidence.expiryDate);
   put('originalAmount', parsed.amount, parsed.confidence.amount);
-  put('currency', parsed.currency, parsed.confidence.currency);
+  // No currency: the app only uses shekels (model.js DEFAULT_CURRENCY).
   return { card, confidence };
 }
 
@@ -131,7 +132,7 @@ export async function runOcrStep(container, { barcode, photoBlob }) {
 
     // 3. Parse and merge. The barcode (confidence 1) wins over an OCR card number.
     const text = outcome.result.text || '';
-    const parsed = parseOcrText(text, { dateOrder: guessDateOrder() });
+    const parsed = parseOcrText(text, { dateOrder: guessDateOrder(), defaultCurrency: DEFAULT_CURRENCY });
     const fromOcr = ocrFields(parsed);
     finish(run, {
       card: { ...fromOcr.card, ...base.card },

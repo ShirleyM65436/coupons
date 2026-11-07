@@ -8,11 +8,12 @@
 
 export const CARD_TYPES = Object.freeze({ PHYSICAL: 'PHYSICAL', ELECTRONIC: 'ELECTRONIC' });
 
-/** Currency used when nothing else is known. Change this to your own currency. */
-export const DEFAULT_CURRENCY = 'EUR';
-
-/** Currencies offered in the Add/Edit currency dropdown. */
-export const COMMON_CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'CAD', 'AUD', 'ILS', 'PLN', 'SEK', 'NOK', 'DKK', 'CZK', 'JPY'];
+/**
+ * The app's only currency: Israeli new shekel (₪). Every card is saved with this currency.
+ * (The `currency` field is still stored on each card, so supporting more currencies later
+ * only needs a picker in the Add/Edit form again.)
+ */
+export const DEFAULT_CURRENCY = 'ILS';
 
 /** A card counts as "expiring soon" this many days before its expiry date. */
 export const EXPIRY_SOON_DAYS = 30;

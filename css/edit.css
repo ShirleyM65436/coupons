@@ -1,7 +1,5 @@
 /* edit.css - Add / Edit card form. Scoped under .view-edit. */
 
-/* Amount + currency side by side; amount takes the space */
-.view-edit .edit-amount-row { display: grid; grid-template-columns: 1fr 110px; gap: var(--space-3); align-items: start; }
 .view-edit .edit-date-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); align-items: start; }
 .view-edit .edit-barcode-row { display: grid; grid-template-columns: 1fr 140px; gap: var(--space-3); align-items: start; }
 
