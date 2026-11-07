@@ -44,3 +44,25 @@ test('rejects bad transactions and photos', () => {
   assert.throws(() => parseBackup(file({ photos: [{ id: 'p' }] })), /photo #1/);
   assert.throws(() => parseBackup(file({ photos: [{ id: 'p', data: '%%%' }] })), /photo #1/);
 });
+
+test('accepts a voucher with amount 0 and an item', () => {
+  const v = { id: 'v1', kind: 'VOUCHER', merchant: 'Cinema', originalAmount: 0, voucherItem: 'Movie ticket', usedAt: '' };
+  const p = parseBackup(file({ cards: [card, v] }));
+  assert.equal(p.cards[1].kind, 'VOUCHER');
+});
+
+test('rejects a voucher without an item', () => {
+  const v = { id: 'v1', kind: 'VOUCHER', merchant: 'Cinema', originalAmount: 0 };
+  assert.throws(() => parseBackup(file({ cards: [v] })), /card #1/);
+  assert.throws(() => parseBackup(file({ cards: [{ ...v, voucherItem: '  ' }] })), /card #1/);
+});
+
+test('rejects an unknown kind', () => {
+  assert.throws(() => parseBackup(file({ cards: [{ ...card, kind: 'GIFT' }] })), /card #1 has an unknown kind/);
+});
+
+test('old cards without kind are money cards and still need a positive amount', () => {
+  assert.equal(parseBackup(file()).cards.length, 1);
+  assert.equal(parseBackup(file({ cards: [{ ...card, kind: 'MONEY' }] })).cards.length, 1);
+  assert.throws(() => parseBackup(file({ cards: [{ ...card, kind: 'MONEY', originalAmount: 0 }] })), /card #1/);
+});

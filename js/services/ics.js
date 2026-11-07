@@ -78,15 +78,28 @@ export function buildIcs(entries, { now = new Date() } = {}) {
   for (const { card, balance } of entries || []) {
     const start = compactDate(card?.expiryDate);
     if (!start) continue; // no (valid) expiry date -> nothing to remind about
-    const money = formatMoney(balance, card.currency, 'en');
+    const voucher = card.kind === 'VOUCHER';
+    const money = voucher ? '' : formatMoney(balance, card.currency, 'en');
     const merchant = card.merchant || 'Gift card';
     const digits = String(card.cardNumber || '').replace(/\D/g, '');
 
     const description = [];
     if (digits) description.push(`Card ending ${digits.slice(-4)}`);
-    description.push(`Remaining balance: ${money}`);
-    description.push('Use this gift card before it expires.');
+    if (voucher) {
+      // Vouchers have no money: describe the item instead.
+      description.push(`Voucher for: ${card.voucherItem || ''}`);
+      description.push('Use this voucher before it expires.');
+    } else {
+      description.push(`Remaining balance: ${money}`);
+      description.push('Use this gift card before it expires.');
+    }
     if (card.notes) description.push(`Notes: ${card.notes}`);
+    const summary = voucher
+      ? `Voucher expires: ${merchant} (${card.voucherItem || 'voucher'})`
+      : `Gift card expires: ${merchant} (${money})`;
+    const alarmText = (days) => voucher
+      ? `${merchant} voucher expires in ${days} days (${card.voucherItem || 'voucher'})`
+      : `${merchant} gift card expires in ${days} days (${money} left)`;
     const descriptionText = description.join('\n'); // escapeText turns these into \n
 
     const alarm = (trigger, text) => [
@@ -103,11 +116,11 @@ export function buildIcs(entries, { now = new Date() } = {}) {
       `DTSTAMP:${stamp}`,
       `DTSTART;VALUE=DATE:${start}`,
       `DTEND;VALUE=DATE:${nextDayCompact(card.expiryDate)}`,
-      `SUMMARY:${escapeText(`Gift card expires: ${merchant} (${money})`)}`,
+      `SUMMARY:${escapeText(summary)}`,
       `DESCRIPTION:${escapeText(descriptionText)}`,
       'TRANSP:TRANSPARENT',
-      ...alarm('-P30D', `${merchant} gift card expires in 30 days (${money} left)`),
-      ...alarm('-P7D', `${merchant} gift card expires in 7 days (${money} left)`),
+      ...alarm('-P30D', alarmText(30)),
+      ...alarm('-P7D', alarmText(7)),
       'END:VEVENT',
     );
   }
@@ -122,7 +135,7 @@ export function buildIcs(entries, { now = new Date() } = {}) {
  * @returns {Promise<number>} number of events exported (0 -> nothing downloaded)
  */
 export async function downloadExpiryIcs() {
-  const [{ getAllCards, getAllTransactions }, { computeBalance, todayIso }, { downloadFile }] = await Promise.all([
+  const [{ getAllCards, getAllTransactions }, { computeBalance, todayIso, hasValueLeft }, { downloadFile }] = await Promise.all([
     import('../db.js'),
     import('../model.js'),
     import('../ui.js'),
@@ -135,7 +148,7 @@ export async function downloadExpiryIcs() {
     if (!card.expiryDate || card.expiryDate < today) continue;
     const own = transactions.filter((t) => t.cardId === card.id);
     const balance = computeBalance(card, own);
-    if (balance > 0) entries.push({ card, balance });
+    if (hasValueLeft(card, balance)) entries.push({ card, balance });
   }
   if (!entries.length) return 0;
 

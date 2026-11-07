@@ -10,6 +10,16 @@
 
 .view-detail .detail-expiry { font-weight: 600; }
 
+/* Voucher: what it is for, shown large where a money card shows the balance */
+.view-detail .detail-voucher-item {
+  font-size: var(--text-xl);
+  font-weight: 800;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.view-detail .detail-used { font-weight: 600; }
+.view-detail .detail-voucher-btn { min-height: 64px; font-size: var(--text-large); }
+
 /* Action buttons: 2-column grid when both exist, single full-width otherwise */
 .view-detail .detail-actions {
   display: grid;

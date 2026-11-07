@@ -10,10 +10,10 @@ import {
   el, icon, setHeader, headerButton, navigate, toast, confirmDialog, showDialog, copyToClipboard,
 } from '../ui.js';
 import {
-  getCard, getTransactions, putTransaction, deleteTransaction, deleteCard, getPhoto,
+  getCard, getTransactions, putTransaction, deleteTransaction, deleteCard, getPhoto, putCard,
 } from '../db.js';
 import {
-  computeBalance, cardStatus, statusLabel, formatMoney, formatDate, daysUntil, todayIso,
+  isVoucher, computeBalance, cardStatus, statusLabel, formatMoney, formatDate, daysUntil, todayIso,
   parseAmountInput, validateTransaction, CARD_TYPES,
 } from '../model.js';
 
@@ -55,12 +55,14 @@ export async function render(container, params) {
     actions: [headerButton('Edit card', 'edit', () => navigate(`#/card/${card.id}/edit`))],
   });
 
-  let transactions = await getTransactions(card.id);
+  // Vouchers never have transactions.
+  const voucher = isVoucher(card);
+  let transactions = voucher ? [] : await getTransactions(card.id);
   if (token !== renderToken) return;
 
-  // Containers for the parts that change after add/delete.
+  // Containers for the parts that change after add/delete (or after marking a voucher used).
   const summaryBox = el('section', { class: 'card detail-summary stack-small' });
-  const txBox = el('section', { class: 'card stack detail-transactions' });
+  const txBox = el('section', { class: voucher ? 'card stack detail-voucher-action' : 'card stack detail-transactions' });
   const detailsBox = buildDetails(card);
   const photoBox = el('div', {});
 
@@ -68,8 +70,24 @@ export async function render(container, params) {
   function draw(focus) {
     const balance = computeBalance(card, transactions);
     summaryBox.replaceChildren(...buildSummary(card, balance));
-    txBox.replaceChildren(...buildTransactions(card, transactions, balance, onAdd, onDelete));
+    if (voucher) txBox.replaceChildren(buildVoucherAction(card, onToggleUsed));
+    else txBox.replaceChildren(...buildTransactions(card, transactions, balance, onAdd, onDelete));
     if (focus) txBox.querySelector(focus)?.focus();
+  }
+
+  /** Voucher: mark as used today / back to not used. Saves, then redraws without reloading. */
+  async function onToggleUsed() {
+    const previous = card.usedAt;
+    card.usedAt = previous ? '' : todayIso();
+    try {
+      await putCard(card);
+    } catch {
+      card.usedAt = previous; // undo the in-memory change
+      toast('Could not save the change', 'error');
+      return;
+    }
+    toast(card.usedAt ? 'Marked as used' : 'Marked as not used', 'success');
+    draw('.detail-voucher-btn');
   }
 
   /** Reload transactions from the DB and redraw. */
@@ -141,11 +159,22 @@ export async function render(container, params) {
 /** Merchant, balance, original amount, status badge, expiry line. */
 function buildSummary(card, balance) {
   const status = cardStatus(card, balance);
+  const head = el('div', { class: 'spread' },
+    el('h2', { class: 'detail-merchant' }, card.merchant),
+    el('span', { class: `badge badge-${status}` }, statusLabel(status, card)),
+  );
+  if (isVoucher(card)) {
+    // A voucher shows what it is for instead of a balance.
+    return [
+      head,
+      el('div', { class: 'muted small' }, 'Voucher'),
+      el('div', { class: 'detail-voucher-item', 'data-testid': 'voucher-item' }, card.voucherItem),
+      el('div', { class: 'detail-used' }, card.usedAt ? `Used on ${formatDate(card.usedAt)}` : 'Not used yet'),
+      el('div', { class: 'detail-expiry' }, expiryText(card.expiryDate)),
+    ];
+  }
   return [
-    el('div', { class: 'spread' },
-      el('h2', { class: 'detail-merchant' }, card.merchant),
-      el('span', { class: `badge badge-${status}` }, statusLabel(status)),
-    ),
+    head,
     el('div', { class: 'detail-balance', 'aria-label': 'Current balance' }, formatMoney(balance, card.currency)),
     el('div', { class: 'muted' }, `of ${formatMoney(card.originalAmount, card.currency)}`),
     el('div', { class: 'detail-expiry' }, expiryText(card.expiryDate)),
@@ -205,7 +234,8 @@ function buildDetails(card) {
 
   rows.push(detailRow('Type', card.type === CARD_TYPES.ELECTRONIC ? 'Electronic' : 'Physical'));
   if (card.issueDate) rows.push(detailRow('Issue date', formatDate(card.issueDate)));
-  rows.push(detailRow('Original amount', formatMoney(card.originalAmount, card.currency)));
+  if (isVoucher(card)) rows.push(detailRow('Voucher for', card.voucherItem));
+  else rows.push(detailRow('Original amount', formatMoney(card.originalAmount, card.currency)));
   if (card.createdAt) rows.push(detailRow('Added on', formatDate(card.createdAt.slice(0, 10))));
   if (card.notes) rows.push(detailRow('Notes', el('span', { class: 'detail-notes' }, card.notes))); // line breaks via CSS
 
@@ -229,6 +259,16 @@ function copyButton(label, text, successMessage) {
       else toast('Could not copy to clipboard', 'error');
     },
   }, icon('copy'));
+}
+
+// ---------------------------------------------------------------- voucher action
+
+/** Big "Mark as used" / "Mark as not used" button (replaces the Transactions section). */
+function buildVoucherAction(card, onToggle) {
+  const used = Boolean(card.usedAt);
+  return el('button', {
+    class: `btn btn-block detail-voucher-btn ${used ? '' : 'btn-primary'}`, type: 'button', onclick: onToggle,
+  }, used ? 'Mark as not used' : 'Mark as used');
 }
 
 // ---------------------------------------------------------------- transactions

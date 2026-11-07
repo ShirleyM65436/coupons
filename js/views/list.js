@@ -4,7 +4,7 @@ import { el, icon, setHeader, headerButton, navigate } from '../ui.js';
 import { getAllCards, getAllTransactions, getMeta, META_LAST_EXPORT } from '../db.js';
 import {
   STATUS, computeBalance, cardStatus, statusLabel, formatMoney, formatDate,
-  isExpiringSoon, daysUntil, isBackupOverdue,
+  isExpiringSoon, daysUntil, isBackupOverdue, isVoucher, hasValueLeft,
 } from '../model.js';
 
 // Search text and filter live at module level so they survive a trip to a card
@@ -55,16 +55,21 @@ function cardRow({ card, balance, status }) {
       el('div', { class: 'list-card-expiry muted small' }, expiry),
     ),
     el('div', { class: 'list-card-side' },
-      el('div', { class: 'list-card-balance' }, formatMoney(balance, card.currency)),
-      el('span', { class: `badge badge-${status}` }, statusLabel(status)),
+      // Vouchers show what they are for (and a "Voucher" tag) instead of a balance.
+      isVoucher(card)
+        ? el('div', { class: 'list-card-voucher' },
+          el('span', { class: 'list-card-item' }, card.voucherItem),
+          el('span', { class: 'list-voucher-tag' }, 'Voucher'))
+        : el('div', { class: 'list-card-balance' }, formatMoney(balance, card.currency)),
+      el('span', { class: `badge badge-${status}` }, statusLabel(status, card)),
     ),
   );
 }
 
-/** Banner listing cards that still have money and expire within 30 days. */
+/** Banner listing cards that still have money (or an unused voucher) and expire within 30 days. */
 function expiringBanner(items) {
   const soon = items
-    .filter((i) => i.balance > 0 && isExpiringSoon(i.card))
+    .filter((i) => hasValueLeft(i.card, i.balance) && isExpiringSoon(i.card))
     .sort((a, b) => a.card.expiryDate.localeCompare(b.card.expiryDate));
   if (!soon.length) return null;
   return el('div', { class: 'banner banner-warn list-banner', role: 'status' },
@@ -156,14 +161,19 @@ export async function render(container, params) {
     const shown = items.filter((i) => matchesFilter(i.status) && i.card.merchant.toLowerCase().includes(q));
 
     // Summary: count, plus total remaining balance per currency of the shown usable cards.
+    // Money totals count money cards only; vouchers are just counted.
     const totals = new Map();
+    let voucherCount = 0;
     for (const i of shown) {
+      if (isVoucher(i.card)) { voucherCount++; continue; }
       if (i.status === STATUS.ACTIVE || i.status === STATUS.EXPIRING) {
         totals.set(i.card.currency, (totals.get(i.card.currency) || 0) + i.balance);
       }
     }
     const totalText = [...totals].map(([cur, sum]) => formatMoney(sum, cur)).join(' + ');
-    summary.textContent = `${shown.length} ${shown.length === 1 ? 'card' : 'cards'}` + (totalText ? ` · ${totalText} available` : '');
+    summary.textContent = `${shown.length} ${shown.length === 1 ? 'card' : 'cards'}`
+      + (totalText ? ` · ${totalText} available` : '')
+      + (voucherCount ? ` · ${voucherCount} ${voucherCount === 1 ? 'voucher' : 'vouchers'}` : '');
 
     if (!shown.length) {
       listBox.replaceChildren(el('div', { class: 'empty-state' },

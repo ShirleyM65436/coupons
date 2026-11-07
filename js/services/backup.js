@@ -124,7 +124,19 @@ export function parseBackup(jsonText) {
     if (!isObject(c)) throw new Error(`The backup is damaged: card #${n} is not valid.`);
     if (!isNonEmptyString(c.id)) throw new Error(`The backup is damaged: card #${n} has no id.`);
     if (!isNonEmptyString(c.merchant)) throw new Error(`The backup is damaged: card #${n} has no merchant.`);
-    if (!Number.isInteger(c.originalAmount) || c.originalAmount <= 0) {
+    // Cards without `kind` (old backups) are money cards.
+    if (c.kind !== undefined && c.kind !== 'MONEY' && c.kind !== 'VOUCHER') {
+      throw new Error(`The backup is damaged: card #${n} has an unknown kind.`);
+    }
+    if (c.kind === 'VOUCHER') {
+      // A voucher has no real amount (0 is fine) but must say what it is for.
+      if (!Number.isInteger(c.originalAmount) || c.originalAmount < 0) {
+        throw new Error(`The backup is damaged: card #${n} (${c.merchant}) has an invalid amount.`);
+      }
+      if (!isNonEmptyString(c.voucherItem)) {
+        throw new Error(`The backup is damaged: card #${n} (${c.merchant}) is a voucher without a description.`);
+      }
+    } else if (!Number.isInteger(c.originalAmount) || c.originalAmount <= 0) {
       throw new Error(`The backup is damaged: card #${n} (${c.merchant}) has an invalid amount.`);
     }
     cardIds.add(c.id);

@@ -6,7 +6,7 @@
 
 import { el, setHeader, navigate, toast } from '../ui.js';
 import {
-  CARD_TYPES, DEFAULT_CURRENCY,
+  CARD_TYPES, CARD_KINDS, DEFAULT_CURRENCY,
   validateCard, parseAmountInput, minorToInputString, totalSpent,
 } from '../model.js';
 import {
@@ -20,7 +20,7 @@ import { merchantPicker } from './merchantPicker.js';
 // Fields whose OCR confidence below this value are marked "please check".
 const LOW_CONFIDENCE = 0.6;
 // Order in which fields appear (used to focus the first invalid one).
-const FIELD_ORDER = ['merchant', 'type', 'link', 'originalAmount', 'issueDate', 'expiryDate'];
+const FIELD_ORDER = ['merchant', 'kind', 'type', 'link', 'originalAmount', 'voucherItem', 'usedAt', 'issueDate', 'expiryDate'];
 
 // The app uses a single currency (shekel), so there is no currency picker.
 const CURRENCY = DEFAULT_CURRENCY;
@@ -40,7 +40,11 @@ function revokeUrl(url) {
   objectUrls = objectUrls.filter((u) => u !== url);
 }
 
+// Bumped by cleanup() so a render that resumes after the user left does nothing.
+let renderToken = 0;
+
 export async function render(container, params = {}) {
+  const token = ++renderToken;
   const editingId = params.id || null;
   const isEdit = Boolean(editingId);
   const backHash = isEdit ? `#/card/${editingId}` : '#/';
@@ -49,6 +53,7 @@ export async function render(container, params = {}) {
   // ------------------------------------------------------------ load data
   let existing = null;
   let spent = 0;
+  let txCount = 0; // a money card with transactions cannot become a voucher
   if (isEdit) {
     existing = await getCard(editingId);
     if (!existing) {
@@ -57,7 +62,9 @@ export async function render(container, params = {}) {
         el('a', { class: 'btn btn-primary', href: '#/' }, 'Back to my cards')));
       return;
     }
-    spent = totalSpent(await getTransactions(editingId));
+    const txs = await getTransactions(editingId);
+    spent = totalSpent(txs);
+    txCount = txs.length;
   }
 
   // The scan draft only applies to "add".
@@ -69,6 +76,10 @@ export async function render(container, params = {}) {
   const src = existing || draftCard;
   const initial = {
     merchant: src.merchant || '',
+    // Scan drafts are always money; only a stored card can be a voucher.
+    kind: existing && existing.kind === CARD_KINDS.VOUCHER ? CARD_KINDS.VOUCHER : CARD_KINDS.MONEY,
+    voucherItem: existing?.voucherItem || '',
+    usedAt: existing?.usedAt || '',
     type: src.type === CARD_TYPES.ELECTRONIC ? CARD_TYPES.ELECTRONIC : CARD_TYPES.PHYSICAL,
     link: src.link || '',
     cardNumber: src.cardNumber || '',
@@ -152,6 +163,9 @@ export async function render(container, params = {}) {
   // ------------------------------------------------------------ controls
   // Merchant: text box + user-editable quick options list below it (see merchantPicker.js).
   const { root: merchantBox, input: merchant } = await merchantPicker(initial.merchant);
+  // The user may have left while we were loading: cleanup() already revoked our photo URL,
+  // so do not build a form that would point an <img> at a revoked blob.
+  if (token !== renderToken) return;
 
   // Type: segmented radios.
   const typeRadios = [[CARD_TYPES.PHYSICAL, 'Physical'], [CARD_TYPES.ELECTRONIC, 'Electronic']].map(([value, text]) =>
@@ -159,6 +173,21 @@ export async function render(container, params = {}) {
       el('input', { type: 'radio', name: 'type', value, id: `type-${value}`, checked: initial.type === value }),
       el('span', {}, text)));
   const typeGroup = el('div', { class: 'segmented', role: 'radiogroup', 'aria-label': 'Type', id: 'type-group' }, ...typeRadios);
+
+  // Kind: Money (default) or Voucher. Voucher is disabled for a money card that has transactions.
+  const voucherLocked = isEdit && initial.kind === CARD_KINDS.MONEY && txCount > 0;
+  const kindRadios = [[CARD_KINDS.MONEY, 'Money'], [CARD_KINDS.VOUCHER, 'Voucher']].map(([value, text]) =>
+    el('label', {},
+      el('input', {
+        type: 'radio', name: 'kind', value, id: `kind-${value}`, checked: initial.kind === value,
+        disabled: value === CARD_KINDS.VOUCHER && voucherLocked,
+      }),
+      el('span', {}, text)));
+  const kindGroup = el('div', { class: 'segmented', role: 'radiogroup', 'aria-label': 'Kind', id: 'kind-group' }, ...kindRadios);
+
+  // Voucher-only fields.
+  const voucherItem = el('input', { id: 'voucherItem', name: 'voucherItem', type: 'text', value: initial.voucherItem, placeholder: 'Movie ticket + popcorn + drink', autocomplete: 'off', 'aria-required': 'true' });
+  const usedAt = el('input', { id: 'usedAt', name: 'usedAt', type: 'date', value: initial.usedAt });
 
   const link = el('input', { id: 'link', name: 'link', type: 'url', value: initial.link, placeholder: 'https://…', autocomplete: 'off' });
 
@@ -212,6 +241,21 @@ export async function render(container, params = {}) {
     linkField.hidden = form.querySelector('input[name="type"]:checked')?.value !== CARD_TYPES.ELECTRONIC;
   };
 
+  const amountField = field('originalAmount', 'Amount (₪)', amount);
+  const voucherItemField = field('voucherItem', 'What is it for?', voucherItem);
+  const usedAtField = field('usedAt', 'Used on', usedAt, { hint: 'Leave empty if not used yet' });
+  const kindHint = voucherLocked ? el('p', { class: 'hint', id: 'kind-hint' }, 'Delete its transactions first to turn it into a voucher') : null;
+  const kindField = field('kind', 'Kind', kindGroup, { labelFor: 'kind-MONEY' });
+  if (kindHint) kindField.insertBefore(kindHint, errorEls.kind);
+  const currentKind = () => form.querySelector('input[name="kind"]:checked')?.value || CARD_KINDS.MONEY;
+  /** Show Amount for money, or item + used-on for a voucher. */
+  const syncKindVisibility = () => {
+    const voucher = currentKind() === CARD_KINDS.VOUCHER;
+    amountField.hidden = voucher;
+    voucherItemField.hidden = !voucher;
+    usedAtField.hidden = !voucher;
+  };
+
   const saveBtn = el('button', { type: 'submit', class: 'btn btn-primary btn-block' }, 'Save');
   const cancelBtn = el('button', { type: 'button', class: 'btn btn-block', onclick: () => {
     clearDraft();
@@ -221,9 +265,12 @@ export async function render(container, params = {}) {
   const form = el('form', { class: 'stack', novalidate: true, autocomplete: 'off' },
     draft ? el('div', { class: 'banner' }, 'Check the details read from your card, then save.') : null,
     field('merchant', 'Merchant', merchantBox, { labelFor: 'merchant' }),
+    kindField,
     field('type', 'Type', typeGroup, { labelFor: 'type-PHYSICAL' }),
     linkField,
-    field('originalAmount', 'Amount (₪)', amount),
+    amountField,
+    voucherItemField,
+    usedAtField,
     field('cardNumber', 'Card number', cardNumber),
     field('pin', 'PIN', pin),
     el('div', { class: 'edit-date-row' },
@@ -244,6 +291,9 @@ export async function render(container, params = {}) {
   // Type radios: toggle link visibility.
   form.querySelectorAll('input[name="type"]').forEach((r) => r.addEventListener('change', () => { syncLinkVisibility(); clearError('type'); clearError('link'); }));
   syncLinkVisibility();
+  // Kind radios: swap Amount <-> voucher fields.
+  form.querySelectorAll('input[name="kind"]').forEach((r) => r.addEventListener('change', () => { syncKindVisibility(); clearError('kind'); }));
+  syncKindVisibility();
   refreshPhoto();
 
   // ------------------------------------------------------------ submit
@@ -260,11 +310,17 @@ export async function render(container, params = {}) {
     const parsedAmount = amountText ? parseAmountInput(amountText, cur) : null;
     const bcValue = barcodeValue.value.trim();
 
+    const voucher = currentKind() === CARD_KINDS.VOUCHER;
+
     const card = {
       merchant: merchant.value.trim(),
+      kind: voucher ? CARD_KINDS.VOUCHER : CARD_KINDS.MONEY,
       type,
       link: type === CARD_TYPES.ELECTRONIC ? link.value.trim() : '', // hidden field is ignored
-      originalAmount: parsedAmount,
+      // Hidden fields are neither validated nor saved (normalizeCard clears them too).
+      originalAmount: voucher ? 0 : parsedAmount,
+      voucherItem: voucher ? voucherItem.value.trim() : '',
+      usedAt: voucher ? usedAt.value : '',
       currency: cur,
       cardNumber: cardNumber.value.trim(),
       pin: pin.value.trim(),
@@ -275,8 +331,8 @@ export async function render(container, params = {}) {
       notes: notes.value.trim(),
     };
 
-    const { valid, errors } = validateCard(card, spent);
-    if (amountText && parsedAmount === null) errors.originalAmount = 'Enter a valid amount';
+    const { valid, errors } = validateCard(card, voucher ? 0 : spent);
+    if (!voucher && amountText && parsedAmount === null) errors.originalAmount = 'Enter a valid amount';
     if (!valid || Object.keys(errors).length) {
       for (const name of Object.keys(errors)) if (fieldEls[name]) setError(name, errors[name]);
       const first = FIELD_ORDER.find((n) => errors[n]);
@@ -330,6 +386,7 @@ export async function render(container, params = {}) {
  * for a later manual "Add".
  */
 export function cleanup() {
+  renderToken++;
   clearDraft();
   for (const url of objectUrls) {
     try { URL.revokeObjectURL(url); } catch { /* ignore */ }

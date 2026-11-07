@@ -96,3 +96,14 @@ test('empty input still yields a valid calendar', () => {
       'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'END:VCALENDAR', ''].join('\r\n'));
   }
 });
+
+test('voucher event: summary names the item, no money anywhere', () => {
+  const v = card({ id: 'v1', kind: 'VOUCHER', merchant: 'Cinema City', voucherItem: 'Movie ticket + popcorn', originalAmount: 0, cardNumber: '' });
+  const ics = build([{ card: v, balance: 0 }]);
+  const lines = logicalLines(ics);
+  assert.ok(lines.includes('SUMMARY:Voucher expires: Cinema City (Movie ticket + popcorn)'));
+  const desc = lines.find((l) => l.startsWith('DESCRIPTION:Voucher for'));
+  assert.ok(desc.includes('Movie ticket + popcorn'));
+  assert.ok(!/[€₪$]|balance/i.test(ics), 'no money / balance text for a voucher');
+  assert.equal(lines.filter((l) => l === 'TRIGGER:-P30D').length, 1);
+});

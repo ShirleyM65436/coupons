@@ -197,6 +197,7 @@ export async function render(container, params) {
       statusEl),
     el('div', { class: 'card barcode-info stack-small' },
       el('div', { class: 'barcode-merchant' }, card.merchant),
+      card.kind === 'VOUCHER' && card.voucherItem ? el('div', { class: 'muted' }, card.voucherItem) : null,
       card.cardNumber ? infoRow('Card number', card.cardNumber) : null,
       card.pin ? infoRow('PIN', card.pin) : null),
     el('a', { class: 'btn btn-block', href: `#/card/${card.id}` }, 'Done')));

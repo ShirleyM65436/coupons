@@ -1,7 +1,7 @@
 // views/merchantPicker.js - the Merchant field of the Add/Edit form:
 // a normal text box with a "quick options" list that drops down below it.
 //
-//  - Focusing the box (or tapping the ▾ button) opens the list; typing filters it.
+//  - Tapping the box (or the ▾ button) opens the list; typing opens and filters it.
 //  - Tapping an option puts it in the box. Any other name can simply be typed.
 //  - "+ Add '<typed name>' to quick list" saves a new option; × removes one.
 //  - The list is stored in IndexedDB (db.getMerchantOptions / setMerchantOptions),
@@ -82,8 +82,9 @@ export async function merchantPicker(value = '') {
     list.replaceChildren(...rows);
   }
 
-  input.addEventListener('focus', open);
-  input.addEventListener('click', () => { if (list.hidden) open(); }); // re-open after picking
+  // Open on a tap or on typing - NOT on focus alone, so the form's autofocus doesn't pop the
+  // list open over the fields below it.
+  input.addEventListener('click', () => { if (list.hidden) open(); });
   input.addEventListener('input', () => { if (!list.hidden) draw(); else open(); });
   input.addEventListener('blur', close);
   input.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
