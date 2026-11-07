@@ -1,0 +1,65 @@
+/* detail.css - layout specific to the card detail view. Scoped under .view-detail. */
+
+.view-detail .detail-merchant { overflow-wrap: anywhere; }
+
+.view-detail .detail-balance {
+  font-size: var(--text-xl);
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.view-detail .detail-expiry { font-weight: 600; }
+
+/* Action buttons: 2-column grid when both exist, single full-width otherwise */
+.view-detail .detail-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-2);
+}
+.view-detail .detail-actions .btn { min-height: 56px; }
+
+/* Photo thumbnail button */
+.view-detail .detail-photo {
+  display: block;
+  width: 100%;
+  max-width: 200px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  overflow: hidden;
+  cursor: pointer;
+}
+.view-detail .detail-photo img { width: 100%; max-height: 140px; object-fit: cover; }
+
+/* Details rows */
+.view-detail .detail-list { display: flex; flex-direction: column; }
+.view-detail .detail-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--touch);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.view-detail .detail-row:last-child { border-bottom: 0; }
+.view-detail .detail-value { overflow-wrap: anywhere; }
+.view-detail .detail-notes { white-space: pre-wrap; } /* keep the user's line breaks */
+
+/* Transactions */
+.view-detail .detail-tx-fields { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+.view-detail .detail-tx-list { display: flex; flex-direction: column; }
+.view-detail .detail-tx {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--touch);
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.view-detail .detail-tx:last-child { border-bottom: 0; }
+.view-detail .detail-tx-amount { font-weight: 700; white-space: nowrap; }
+.view-detail .detail-tx-note { overflow-wrap: anywhere; }
+.view-detail .detail-transactions h2:focus { outline: none; }
+
+.view-detail .detail-danger { margin-top: var(--space-4); }
