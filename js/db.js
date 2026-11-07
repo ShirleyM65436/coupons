@@ -195,11 +195,28 @@ export function clearAll() {
  * @param {{cards?: object[], transactions?: object[], photos?: {id:string, blob:Blob}[]}} data
  */
 export function importRecords({ cards = [], transactions = [], photos = [] }) {
+  return withTx(['cards', 'transactions', 'photos'], 'readwrite', (s) => putAll(s, { cards, transactions, photos }));
+}
+
+/**
+ * Delete all cards/transactions/photos and write the given records, in ONE transaction:
+ * if anything fails (e.g. storage full), nothing is deleted. Meta is kept.
+ * Used by backup import in "replace" mode.
+ */
+export function replaceAll({ cards = [], transactions = [], photos = [] }) {
   return withTx(['cards', 'transactions', 'photos'], 'readwrite', (s) => {
-    for (const c of cards) s.cards.put(normalizeCard(c));
-    for (const t of transactions) s.transactions.put(t);
-    for (const p of photos) s.photos.put({ id: p.id, blob: p.blob });
+    s.cards.clear();
+    s.transactions.clear();
+    s.photos.clear();
+    putAll(s, { cards, transactions, photos });
   });
+}
+
+/** Queue puts for many records on already-open stores (shared by importRecords/replaceAll). */
+function putAll(s, { cards, transactions, photos }) {
+  for (const c of cards) s.cards.put(normalizeCard(c));
+  for (const t of transactions) s.transactions.put(t);
+  for (const p of photos) s.photos.put({ id: p.id, blob: p.blob });
 }
 
 // ---------------------------------------------------------------- storage persistence

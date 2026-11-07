@@ -1,0 +1,10 @@
+/* backup.css - layout specific to the Backup view. */
+.view-backup h2 { margin: 0; font-size: var(--text-lg, 1.125rem); }
+/* .card / .stack set display, which would otherwise defeat the hidden attribute. */
+.view-backup [hidden] { display: none !important; }
+.view-backup h3{ margin: 0; }
+.view-backup .card p { margin: 0; }
+.view-backup label.btn { cursor: pointer; }
+/* Keyboard focus on the hidden file input shows on its label button. */
+.view-backup label.btn:focus-within { outline: 3px solid var(--color-primary, currentColor); outline-offset: 2px; }
+.view-backup .banner { display: flex; align-items: center; gap: var(--space-2, 8px); }

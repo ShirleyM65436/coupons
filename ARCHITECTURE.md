@@ -195,6 +195,7 @@ getMeta(key) -> Promise<any>;  setMeta(key, value) -> Promise<void>
 META_LAST_EXPORT = 'lastExportAt'
 clearAll() -> Promise<void>                   // cards + transactions + photos (keeps meta)
 importRecords({ cards, transactions, photos }) -> Promise<void>   // one atomic transaction, overwrites same ids
+replaceAll({ cards, transactions, photos }) -> Promise<void>      // clear + write in ONE transaction (backup "replace")
 requestPersistence() -> Promise<boolean>      // navigator.storage.persist(); called by app.js at startup
 ```
 `putCard`/`putTransaction` do **not** validate – call the `validate*` functions first.
