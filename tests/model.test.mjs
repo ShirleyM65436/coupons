@@ -80,6 +80,8 @@ test('validateTransaction', () => {
 test('normalizeCard fills defaults and drops link for physical cards', () => {
   const c = normalizeCard({ merchant: ' Shop ', originalAmount: 100, type: 'PHYSICAL', link: 'https://x' });
   assert.equal(c.merchant, 'Shop');
+  assert.equal(c.owner, '', 'owner defaults to empty');
+  assert.equal(normalizeCard({ merchant: 'A', originalAmount: 1, owner: ' Noam ' }).owner, 'Noam');
   assert.equal(c.link, '');
   assert.ok(c.id && c.createdAt);
   assert.equal(c.barcodeFormat, '');

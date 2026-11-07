@@ -232,6 +232,7 @@ function buildDetails(card) {
     rows.push(detailRow('PIN', pinText, toggle, copyButton('Copy PIN', card.pin, 'PIN copied')));
   }
 
+  if (card.owner) rows.push(detailRow('Owner', card.owner));
   rows.push(detailRow('Type', card.type === CARD_TYPES.ELECTRONIC ? 'Electronic' : 'Physical'));
   if (card.issueDate) rows.push(detailRow('Issue date', formatDate(card.issueDate)));
   if (isVoucher(card)) rows.push(detailRow('Voucher for', card.voucherItem));

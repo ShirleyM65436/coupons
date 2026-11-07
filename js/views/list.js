@@ -52,6 +52,7 @@ function cardRow({ card, balance, status }) {
   return el('a', { class: `card list-card status-${status}`, href: `#/card/${card.id}` },
     el('div', { class: 'list-card-main' },
       el('div', { class: 'list-card-merchant' }, card.merchant),
+      card.owner ? el('div', { class: 'list-card-owner small' }, card.owner) : null,
       el('div', { class: 'list-card-expiry muted small' }, expiry),
     ),
     el('div', { class: 'list-card-side' },
@@ -143,7 +144,7 @@ export async function render(container, params) {
   const listBox = el('div', { class: 'list-cards' });
 
   const searchInput = el('input', {
-    id: 'list-search-input', type: 'search', placeholder: 'Search by merchant', 'aria-label': 'Search by merchant',
+    id: 'list-search-input', type: 'search', placeholder: 'Search merchant or owner', 'aria-label': 'Search by merchant or owner',
     value: searchText, autocomplete: 'off',
     oninput: (e) => { searchText = e.target.value; update(); },
   });
@@ -158,7 +159,9 @@ export async function render(container, params) {
     chipButtons.forEach((btn, i) => btn.setAttribute('aria-pressed', String(FILTERS[i][0] === filter)));
 
     const q = searchText.trim().toLowerCase();
-    const shown = items.filter((i) => matchesFilter(i.status) && i.card.merchant.toLowerCase().includes(q));
+    // Search matches the merchant or the owner (case-insensitive).
+    const matchesSearch = (card) => card.merchant.toLowerCase().includes(q) || (card.owner || '').toLowerCase().includes(q);
+    const shown = items.filter((i) => matchesFilter(i.status) && matchesSearch(i.card));
 
     // Summary: count, plus total remaining balance per currency of the shown usable cards.
     // Money totals count money cards only; vouchers are just counted.

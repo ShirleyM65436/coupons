@@ -84,7 +84,8 @@ export default async function () {
     check(!!saved, 'card saved');
     check(saved.originalAmount === 2550 && saved.currency === 'ILS', 'amount 2550 ILS');
     check(saved.link === '' && saved.type === 'PHYSICAL', 'physical card has empty link');
-    for (const k of ['id', 'merchant', 'cardNumber', 'pin', 'originalAmount', 'currency', 'issueDate', 'expiryDate', 'type', 'link', 'barcodeValue', 'barcodeFormat', 'photoId', 'notes', 'createdAt']) {
+    check(saved.owner === '', 'owner is optional (empty when not filled)');
+    for (const k of ['id', 'merchant', 'owner', 'cardNumber', 'pin', 'originalAmount', 'currency', 'issueDate', 'expiryDate', 'type', 'link', 'barcodeValue', 'barcodeFormat', 'photoId', 'notes', 'createdAt']) {
       check(k in saved, `field ${k} present`);
     }
     check(await page.evaluate(() => location.hash) === `#/card/${saved.id}`, 'navigated to detail');
@@ -93,12 +94,25 @@ export default async function () {
     await app.goto('#/add');
     await setMerchant(page, 'BuyMe');
     await page.fill('#originalAmount', '557');
+    await page.fill('#owner', ' Noam ');
     await page.click('button[type=submit]');
     await page.waitForTimeout(500);
     const buyme = (await cards()).find((c) => c.merchant === 'BuyMe');
     check(!!buyme, 'dropdown merchant "BuyMe" saved');
+    check(buyme.owner === 'Noam', 'owner saved (trimmed)');
+    check((await page.locator('#view').innerText()).includes('Noam'), 'detail page shows the owner');
     await app.goto(`#/card/${buyme.id}/edit`);
     check((await page.inputValue('#merchant')) === 'BuyMe', 'edit shows the saved merchant in the box');
+    check((await page.inputValue('#owner')) === 'Noam', 'edit shows the owner');
+    await app.goto('#/add');
+    check((await page.locator('#owner-suggestions option').evaluateAll((os) => os.map((o) => o.value))).includes('Noam'), 'known owners are suggested');
+    // list: owner shown on the row, and search finds cards by owner
+    await app.goto('#/');
+    await page.click('.chip:has-text("All")');
+    await page.fill('#list-search-input', 'noam');
+    const found = await page.locator('.view-list a.card').allInnerTexts();
+    check(found.length === 1 && found[0].includes('BuyMe') && found[0].includes('Noam'), 'list search by owner');
+    await page.fill('#list-search-input', '');
 
     // ---- 5. edit BookNook
     const ids = await app.cardIds();

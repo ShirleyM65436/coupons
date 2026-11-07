@@ -302,6 +302,7 @@ export function normalizeCard(input) {
     id: input.id || newId(),
     kind: voucher ? CARD_KINDS.VOUCHER : CARD_KINDS.MONEY,
     merchant: str(input.merchant),
+    owner: str(input.owner),          // optional: whose card it is, e.g. "Noam"
     cardNumber: str(input.cardNumber),
     pin: str(input.pin),
     originalAmount: voucher ? 0 : Number(input.originalAmount) || 0,   // vouchers have no amount

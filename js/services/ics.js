@@ -84,6 +84,7 @@ export function buildIcs(entries, { now = new Date() } = {}) {
     const digits = String(card.cardNumber || '').replace(/\D/g, '');
 
     const description = [];
+    if (card.owner) description.push(`Owner: ${card.owner}`);
     if (digits) description.push(`Card ending ${digits.slice(-4)}`);
     if (voucher) {
       // Vouchers have no money: describe the item instead.

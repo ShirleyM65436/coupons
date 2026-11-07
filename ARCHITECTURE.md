@@ -86,6 +86,7 @@ All records are plain objects stored in IndexedDB database `giftcards` (version 
 | `id` | string | UUID (`newId()`) |
 | `kind` | `'MONEY' \| 'VOUCHER'` | `CARD_KINDS`; missing on old records = MONEY. VOUCHER = non-money gift (movie ticket…) |
 | `merchant` | string | required, trimmed |
+| `owner` | string | optional: whose card it is (e.g. "Noam"), `''` if not set; searchable in the list |
 | `voucherItem` | string | VOUCHER only (required): what it is for, e.g. "Movie ticket + popcorn"; `''` for MONEY |
 | `usedAt` | string | VOUCHER only: `'YYYY-MM-DD'` when redeemed, `''` = not used yet; always `''` for MONEY |
 | `cardNumber` | string | may be `''`; stored as entered (spaces allowed) |

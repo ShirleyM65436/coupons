@@ -13,6 +13,7 @@
 }
 .view-list .list-card-main { min-width: 0; flex: 1; }
 .view-list .list-card-merchant { font-weight: 700; font-size: var(--text-large); overflow-wrap: anywhere; }
+.view-list .list-card-owner { font-weight: 600; color: var(--color-primary); overflow-wrap: anywhere; }
 .view-list .list-card-side { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-1); flex: none; }
 .view-list .list-card-balance { font-weight: 700; font-size: var(--text-large); white-space: nowrap; }
 

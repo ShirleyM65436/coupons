@@ -10,7 +10,7 @@ import {
   validateCard, parseAmountInput, minorToInputString, totalSpent,
 } from '../model.js';
 import {
-  getCard, getTransactions, putCard, putPhoto, getPhoto, deletePhoto,
+  getAllCards, getCard, getTransactions, putCard, putPhoto, getPhoto, deletePhoto,
 } from '../db.js';
 import { getDraft, clearDraft } from '../draft.js';
 import { downscaleImage } from '../services/photo.js';
@@ -82,6 +82,7 @@ export async function render(container, params = {}) {
     usedAt: existing?.usedAt || '',
     type: src.type === CARD_TYPES.ELECTRONIC ? CARD_TYPES.ELECTRONIC : CARD_TYPES.PHYSICAL,
     link: src.link || '',
+    owner: src.owner || '',
     cardNumber: src.cardNumber || '',
     pin: src.pin || '',
     issueDate: src.issueDate || '',
@@ -193,6 +194,12 @@ export async function render(container, params = {}) {
 
   const amount = el('input', { id: 'originalAmount', name: 'originalAmount', type: 'text', inputmode: 'decimal', value: initial.amount, placeholder: '0.00', autocomplete: 'off', 'aria-required': 'true' });
 
+  // Owner (optional). Suggests names already used on other cards so they are spelled the same way.
+  const knownOwners = [...new Set((await getAllCards()).map((c) => c.owner).filter(Boolean))].sort();
+  if (token !== renderToken) return; // user left the page while loading
+  const ownerSuggestions = el('datalist', { id: 'owner-suggestions' }, ...knownOwners.map((o) => el('option', { value: o })));
+  const owner = textInput('owner', initial.owner, { autocomplete: 'off', list: 'owner-suggestions' });
+
   const cardNumber = textInput('cardNumber', initial.cardNumber, { autocomplete: 'off', autocapitalize: 'characters' });
   const pin = textInput('pin', initial.pin, { autocomplete: 'off' }); // text: PINs may contain letters
   const issueDate = el('input', { id: 'issueDate', name: 'issueDate', type: 'date', value: initial.issueDate });
@@ -271,6 +278,8 @@ export async function render(container, params = {}) {
     amountField,
     voucherItemField,
     usedAtField,
+    field('owner', 'Owner (optional)', owner, { hint: 'Whose card is it? e.g. Noam' }),
+    ownerSuggestions,
     field('cardNumber', 'Card number', cardNumber),
     field('pin', 'PIN', pin),
     el('div', { class: 'edit-date-row' },
@@ -322,6 +331,7 @@ export async function render(container, params = {}) {
       voucherItem: voucher ? voucherItem.value.trim() : '',
       usedAt: voucher ? usedAt.value : '',
       currency: cur,
+      owner: owner.value.trim(),
       cardNumber: cardNumber.value.trim(),
       pin: pin.value.trim(),
       issueDate: issueDate.value,
