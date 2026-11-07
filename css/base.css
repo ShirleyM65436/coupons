@@ -1,0 +1,329 @@
+/* base.css - design tokens, page layout and shared components.
+   Owned by the architect. View-specific styles go in css/<view>.css and must
+   be scoped under .view-<name> (the class app.js puts on <main>). */
+
+/* ------------------------------------------------------------ tokens */
+:root {
+  --color-bg: #f4f6f5;
+  --color-surface: #ffffff;
+  --color-text: #1c2321;
+  --color-muted: #5f6b67;
+  --color-border: #d8dfdc;
+  --color-primary: #1f6f5c;
+  --color-primary-text: #ffffff;
+  --color-primary-soft: #e2f1ec;
+  --color-danger: #b42318;
+  --color-danger-soft: #fdecea;
+  --color-warn: #8a5a00;
+  --color-warn-soft: #fff4d6;
+  --color-success: #1e7a3c;
+  --color-success-soft: #e3f5e9;
+  --color-focus: #2f7de1;
+
+  --radius: 12px;
+  --radius-small: 8px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "Roboto Mono", Consolas, monospace;
+  --text-small: 0.875rem;
+  --text-normal: 1rem;
+  --text-large: 1.25rem;
+  --text-xl: 2rem;
+
+  --touch: 48px;             /* minimum touch target size */
+  --appbar-height: 56px;
+  --max-width: 640px;        /* content column width on large screens */
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #121615;
+    --color-surface: #1c2220;
+    --color-text: #e8eeec;
+    --color-muted: #9aa8a3;
+    --color-border: #33403c;
+    --color-primary: #4fbf9f;
+    --color-primary-text: #08241c;
+    --color-primary-soft: #193a31;
+    --color-danger: #ff8a80;
+    --color-danger-soft: #3d1d1a;
+    --color-warn: #ffcc66;
+    --color-warn-soft: #3a2f12;
+    --color-success: #7dd89b;
+    --color-success-soft: #173323;
+    --shadow: none;
+  }
+}
+
+/* ------------------------------------------------------------ page */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-size: var(--text-normal);
+  line-height: 1.45;
+  color: var(--color-text);
+  background: var(--color-bg);
+  min-height: 100vh;
+}
+h1, h2, h3 { line-height: 1.2; margin: 0; }
+h2 { font-size: var(--text-large); }
+h3 { font-size: var(--text-normal); }
+p { margin: 0; }
+a { color: var(--color-primary); }
+img { max-width: 100%; display: block; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+
+/* ------------------------------------------------------------ app bar */
+.appbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--appbar-height);
+  padding: 0 var(--space-2);
+  padding-top: env(safe-area-inset-top);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+.appbar-title {
+  flex: 1;
+  font-size: var(--text-large);
+  padding-left: var(--space-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.appbar-actions { display: flex; gap: var(--space-1); }
+.appbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--touch);
+  min-height: var(--touch);
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.appbar-btn:active { background: var(--color-primary-soft); }
+
+/* ------------------------------------------------------------ main view column */
+.view {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: var(--space-4);
+  padding-bottom: calc(var(--space-6) * 3 + env(safe-area-inset-bottom)); /* room for FAB */
+}
+
+/* ------------------------------------------------------------ layout utilities */
+.stack { display: flex; flex-direction: column; gap: var(--space-4); }
+.stack-small { display: flex; flex-direction: column; gap: var(--space-2); }
+.row { display: flex; align-items: center; gap: var(--space-2); }
+.row-wrap { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.spread { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.grow { flex: 1; min-width: 0; }
+.muted { color: var(--color-muted); }
+.small { font-size: var(--text-small); }
+.mono { font-family: var(--font-mono); letter-spacing: 0.03em; word-break: break-all; }
+.center { text-align: center; }
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+.list-plain { list-style: none; margin: 0; padding: 0; }
+.icon { display: inline-flex; line-height: 0; }
+
+/* ------------------------------------------------------------ surface card */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  box-shadow: var(--shadow);
+}
+a.card { display: block; color: inherit; text-decoration: none; }
+a.card:active { background: var(--color-primary-soft); }
+
+/* ------------------------------------------------------------ buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--touch);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:active { filter: brightness(0.92); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-primary-text); }
+.btn-danger { background: var(--color-danger); border-color: var(--color-danger); color: #fff; }
+.btn-ghost { background: transparent; border-color: transparent; color: var(--color-primary); }
+.btn-block { display: flex; width: 100%; }
+.btn-small { min-height: 36px; padding: 0 var(--space-3); font-size: var(--text-small); }
+.btn-icon { padding: 0; min-width: var(--touch); }
+
+/* Floating action button (bottom right) */
+.fab {
+  position: fixed;
+  right: max(var(--space-4), env(safe-area-inset-right));
+  bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 56px;
+  padding: 0 var(--space-5);
+  border: 0;
+  border-radius: 28px;
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+  font: inherit;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* ------------------------------------------------------------ forms */
+.field { display: flex; flex-direction: column; gap: var(--space-1); }
+.field > label, .field-label { font-weight: 600; font-size: var(--text-small); }
+.field .hint { font-size: var(--text-small); color: var(--color-muted); }
+.field .error-text { font-size: var(--text-small); color: var(--color-danger); }
+.field.has-error input, .field.has-error select, .field.has-error textarea { border-color: var(--color-danger); }
+/* "check this value" highlight, e.g. for OCR-filled fields */
+.field.needs-check input, .field.needs-check select { border-color: var(--color-warn); background: var(--color-warn-soft); }
+
+input, select, textarea {
+  width: 100%;
+  min-height: var(--touch);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 16px; /* 16px stops mobile browsers zooming in on focus */
+}
+textarea { min-height: 96px; resize: vertical; }
+input[type="checkbox"], input[type="radio"] { width: 22px; min-height: 22px; accent-color: var(--color-primary); }
+input[type="file"] { padding: var(--space-2); }
+.choice { display: flex; align-items: center; gap: var(--space-2); min-height: var(--touch); }
+
+/* Segmented control (e.g. Physical / Electronic) built from radio inputs */
+.segmented { display: flex; border: 1px solid var(--color-border); border-radius: var(--radius-small); overflow: hidden; }
+.segmented label { flex: 1; display: flex; align-items: center; justify-content: center; min-height: var(--touch); cursor: pointer; font-weight: 600; }
+.segmented input { position: absolute; opacity: 0; pointer-events: none; }
+.segmented input:checked + span { color: var(--color-primary-text); }
+.segmented label:has(input:checked) { background: var(--color-primary); color: var(--color-primary-text); }
+.segmented label:has(input:focus-visible) { outline: 3px solid var(--color-focus); outline-offset: -3px; }
+
+/* ------------------------------------------------------------ filter chips */
+.chips { display: flex; gap: var(--space-2); overflow-x: auto; padding-bottom: var(--space-1); }
+.chip {
+  flex: none;
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-small);
+  font-weight: 600;
+  cursor: pointer;
+}
+.chip[aria-pressed="true"] { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-primary-text); }
+
+/* ------------------------------------------------------------ status badges */
+.badge {
+  display: inline-block;
+  padding: 2px var(--space-2);
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+.badge-active { background: var(--color-success-soft); color: var(--color-success); }
+.badge-expiring { background: var(--color-warn-soft); color: var(--color-warn); }
+.badge-expired { background: var(--color-danger-soft); color: var(--color-danger); }
+.badge-used { background: var(--color-border); color: var(--color-muted); }
+
+/* ------------------------------------------------------------ banners */
+.banner {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius);
+  background: var(--color-primary-soft);
+}
+.banner-warn { background: var(--color-warn-soft); color: var(--color-warn); }
+.banner-danger { background: var(--color-danger-soft); color: var(--color-danger); }
+
+/* ------------------------------------------------------------ progress bar */
+.progress { width: 100%; height: 10px; border-radius: 5px; background: var(--color-border); overflow: hidden; }
+.progress > .progress-bar { height: 100%; width: 0; background: var(--color-primary); transition: width 0.2s; }
+
+/* ------------------------------------------------------------ empty state */
+.empty-state { padding: var(--space-6) var(--space-4); text-align: center; color: var(--color-muted); display: flex; flex-direction: column; gap: var(--space-3); align-items: center; }
+
+/* ------------------------------------------------------------ dialog */
+.dialog {
+  width: min(92vw, 480px);
+  max-height: 90vh;
+  border: 0;
+  border-radius: var(--radius);
+  padding: var(--space-5);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.dialog::backdrop { background: rgba(0, 0, 0, 0.5); }
+.dialog-title { margin-bottom: var(--space-2); }
+.dialog-actions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-4); }
+
+/* ------------------------------------------------------------ toast */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
+  transform: translate(-50%, 200%);
+  z-index: 100;
+  max-width: calc(100vw - 32px);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-small);
+  background: #222;
+  color: #fff;
+  font-weight: 600;
+  opacity: 0;
+  transition: transform 0.2s, opacity 0.2s;
+  pointer-events: none;
+}
+.toast.show { transform: translate(-50%, 0); opacity: 1; }
+.toast-error { background: var(--color-danger); color: #fff; }
+.toast-success { background: var(--color-success); color: #fff; }

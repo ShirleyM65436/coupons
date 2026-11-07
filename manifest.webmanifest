@@ -1,0 +1,12 @@
+{
+  "name": "Gift Card Tracker",
+  "short_name": "Gift Cards",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f6f5",
+  "theme_color": "#1f6f5c",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

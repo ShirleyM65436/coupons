@@ -1,0 +1,4 @@
+node_modules/
+test-results/
+*.log
+# vendor/ is committed on purpose: GitHub Pages serves it. Regenerate with `npm run vendor`.

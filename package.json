@@ -1,0 +1,22 @@
+{
+  "name": "gift-card-tracker",
+  "version": "1.0.0",
+  "scripts": {
+    "test": "node --test tests/**/*.test.mjs",
+    "vendor": "node scripts/vendor.mjs",
+    "start": "node scripts/serve.mjs",
+    "smoke": "node tests/smoke/run.mjs"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@tesseract.js-data/eng": "^1.0.0",
+    "@zxing/browser": "^0.2.1",
+    "@zxing/library": "^0.23.0",
+    "jsbarcode": "^3.12.3",
+    "playwright": "^1.65.0",
+    "qrcode-generator": "^2.0.4",
+    "tesseract.js": "^7.0.0",
+    "tesseract.js-core": "^7.0.0"
+  },
+  "private": true
+}

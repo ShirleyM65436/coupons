@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Placeholder app icon: a gift card with a ribbon. -->
+  <rect width="512" height="512" rx="96" fill="#1f6f5c"/>
+  <rect x="76" y="146" width="360" height="220" rx="28" fill="#ffffff"/>
+  <rect x="196" y="146" width="44" height="220" fill="#f2b632"/>
+  <rect x="76" y="230" width="360" height="40" fill="#f2b632"/>
+  <circle cx="218" cy="250" r="34" fill="none" stroke="#c98a00" stroke-width="14"/>
+</svg>
